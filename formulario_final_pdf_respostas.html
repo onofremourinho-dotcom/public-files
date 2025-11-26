@@ -65,7 +65,6 @@
         }
 
         .tab-button {
-            /* flex: 1 removido para permitir rolagem, agora só 'flex-shrink: 0' */
             flex-shrink: 0; 
             padding: 15px;
             border: none;
@@ -76,7 +75,7 @@
             color: #666;
             transition: all 0.3s;
             border-bottom: 3px solid transparent;
-            min-width: 130px; /* Garante que todos tenham largura para rolagem */
+            min-width: 130px; 
         }
 
         .tab-button:hover {
@@ -407,7 +406,6 @@
 
         /* --- CORREÇÃO DO CSS DE IMPRESSÃO (Print Media Query) --- */
         @media print {
-            /* Regras para o Relatório Final (#reportScreen) */
             /* Esconde tudo que não for o ReportScreen OU o TempPrintSection */
             body > *:not(.report-screen):not(#tempPrintSection) {
                 display: none !important;
@@ -419,9 +417,6 @@
                 width: 100%;
                 margin: 0;
                 box-shadow: none;
-            }
-            #reportContent { 
-                display: block !important; 
             }
             .container { 
                 box-shadow: none; 
@@ -435,10 +430,10 @@
                 display: none !important; /* Esconde botões de navegação no final do relatório */
             }
             
-            /* Regras para o Backup de Etapa (#tempPrintSection) - Garante que apenas ele aparece quando injetado */
+            /* Regras para o Backup de Etapa (#tempPrintSection) */
             #tempPrintSection {
                 display: block !important;
-                position: fixed; /* Fixa na tela para evitar interações */
+                position: fixed; 
                 top: 0;
                 left: 0;
                 width: 100%;
@@ -524,7 +519,7 @@
 
                     <div class="form-group">
                         <label class="form-label">📊 Frequência de erros/atrasos</label>
-                        <select name="r1_frequencia" id="r1_frequencia" onchange="updateRiskMatrix()">
+                        <select name="r1_frequencia" onchange="updateRiskMatrix()">
                             <option value="">-- Selecione --</option>
                             <option value="nenhum">Nenhum - funciona 100%</option>
                             <option value="raro">Raro (menos de 1x/mês)</option>
@@ -1472,7 +1467,6 @@
                     document.body.removeChild(printContent);
                     containerEl.style.display = originalContainerDisplay;
                     document.body.style.background = originalBodyBackground;
-                    // Garante que a etapa correta está visível 
                     document.getElementById(sectionId).classList.add('active'); 
                 }, 500); 
                 
@@ -1485,20 +1479,26 @@
         // --- FUNÇÕES DE RELATÓRIO FINAL ---
         
         /**
-         * Aciona a impressão do relatório final com um pequeno atraso.
+         * Aciona a impressão do relatório final com um pequeno atraso (300ms).
+         * Este atraso é crucial para a estabilidade em navegadores móveis.
          */
         function triggerPrint() {
             // Garante que o ReportScreen está visível e ativo antes de imprimir
             document.getElementById('reportScreen').classList.add('active');
             document.querySelector('.container').style.boxShadow = 'none'; 
             
-            alert('Preparando o Relatório Final. Aguarde o diálogo de impressão aparecer e selecione "Salvar como PDF".');
+            // Oculta os botões de navegação da tela de relatório, garantindo que o PDF seja limpo
+            const navButtons = document.querySelector('#reportScreen > div:last-child');
+            const originalNavDisplay = navButtons.style.display;
+            navButtons.style.display = 'none';
             
             setTimeout(() => {
                 window.print();
-                // Restaura o box-shadow e o estado da tela após a impressão
+                
+                // Restaura o estado da tela após a impressão
                 setTimeout(() => {
                     document.querySelector('.container').style.boxShadow = '0 20px 60px rgba(0,0,0,0.3)';
+                    navButtons.style.display = originalNavDisplay; 
                 }, 100);
             }, 300); 
         }
@@ -1512,14 +1512,11 @@
             document.getElementById('reportScreen').classList.add('active');
             document.getElementById('reviewScreen').classList.remove('active');
             document.getElementById('tabSystem').style.display = 'none';
-            // Note: O box-shadow será removido e restaurado na função triggerPrint() para garantir o layout correto.
 
             window.scrollTo({top: 0, behavior: 'smooth'});
         }
         
-        function downloadPDF() {
-            alert('A geração do PDF é feita através da opção "Imprimir" do navegador. Após clicar no botão "Gerar PDF", você deve: 1. Abrir o menu do navegador (três pontos) ou compartilhar. 2. Selecionar "Imprimir" e mudar o destino para "Salvar como PDF".');
-        }
+        // Função downloadPDF (Dica) removida conforme solicitado.
 
         function newInterview() {
             if (confirm('Deseja iniciar uma nova entrevista? O progresso atual será perdido. Certifique-se de que salvou o PDF da entrevista anterior.')) {
@@ -1632,7 +1629,7 @@
 
                 <div style="margin-top: 40px; padding-top: 20px; border-top: 2px solid #ddd; font-size: 12px; color: #999;">
                     <p>Relatório gerado em: ${new Date().toLocaleString('pt-BR')}</p>
-                    <p>Versão: 1.8 (Finalização) | Sistema de Mapeamento Tecnológico</p>
+                    <p>Versão: 1.9 (Finalização da Impressão) | Sistema de Mapeamento Tecnológico</p>
                 </div>
             `;
             
