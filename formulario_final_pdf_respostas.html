@@ -404,25 +404,28 @@
             margin-top: 15px;
         }
 
-        /* --- CSS DE IMPRESSÃO (Focado apenas no iFrame para o Relatório Final) --- */
+        /* --- CSS DE IMPRESSÃO (Focado no iFrame e Backup de Etapa) --- */
         @media print {
-            /* Esconde todo o corpo principal exceto o iFrame temporário */
-            body > *:not(#print-iframe) {
+            /* Esconde todo o corpo principal exceto o iFrame temporário OU o backup de etapa */
+            body > *:not(#print-iframe):not(#tempPrintSection) {
                 display: none !important;
             }
             
-            /* Regras para o Backup de Etapa (Mantido via injeção DOM para estabilidade) */
+            /* Regras gerais de impressão para iFrame e backup de etapa */
+            #print-iframe,
             #tempPrintSection {
                 display: block !important;
-                position: absolute !important;
+                position: fixed !important;
                 left: 0 !important;
                 top: 0 !important;
                 width: 100% !important;
-                height: auto !important;
+                height: 100% !important;
+                z-index: 9999 !important;
             }
-            #tempPrintSection * {
+
+            /* Garante que o texto e as caixas de cor saiam corretamente no PDF */
+            * {
                 color: #000 !important;
-                background-color: transparent !important;
                 -webkit-print-color-adjust: exact; 
                 print-color-adjust: exact;
             }
@@ -432,6 +435,7 @@
         @media (max-width: 768px) {
             .container { border-radius: 0; }
             .tab-system { 
+                /* Permite rolagem horizontal */
                 overflow-x: auto;
                 white-space: nowrap;
                 -webkit-overflow-scrolling: touch;
@@ -1455,48 +1459,43 @@
         }
 
 
-        // --- FUNÇÃO CRÍTICA FINAL: GERA E IMPRIME O RELATÓRIO FINAL EM NOVA JANELA (Versão 2.2 Revertida para Nova Aba) ---
+        // --- FUNÇÃO CRÍTICA FINAL: GERA E IMPRIME O RELATÓRIO FINAL VIA IFRAME OCULTO (Versão 2.3) ---
         
         function generateAndPrintFinalReport() {
-            // 1. Gera o HTML do relatório final usando a função existente
+            // 1. Gera o HTML do relatório final
             const criticidades = calculateCriticalities();
             const reportHTML = buildReport(criticidades);
 
-            // 2. Coleta o estilo CSS de TODA a página (a parte mais crucial)
+            // 2. Coleta o CSS COMPLETO da página
             let styleContent = '';
             document.querySelectorAll('style').forEach(style => {
                 styleContent += style.innerHTML;
             });
-
-            // 3. Cria o HTML completo para a nova janela
-            const finalReportHtml = `
+            
+            // 3. Monta o HTML isolado para o iFrame
+            const iframeContent = `
                 <!DOCTYPE html>
-                <html lang="pt-BR">
+                <html>
                 <head>
                     <meta charset="UTF-8">
-                    <title>Relatório Final - Mapeamento Tecnológico</title>
+                    <title>Relatório Final</title>
                     <style>${styleContent}</style>
                     <style>
-                        /* Força a nova janela a mostrar APENAS o relatório e o container com o mínimo de estilo */
+                        /* Força a impressão do conteúdo no iFrame */
                         body { 
-                            padding: 20px !important; 
-                            background: white !important; 
+                            padding: 20px; 
+                            background: white; 
+                            width: 100%; 
+                            margin: 0;
                         }
-                        .container {
-                            max-width: 1000px !important; 
-                            margin: 0 auto !important; 
-                            box-shadow: none !important;
-                            border-radius: 0 !important;
-                            overflow: visible !important;
+                        .container { 
+                            max-width: 1000px;
+                            margin: 0 auto;
+                            box-shadow: none;
+                            overflow: visible;
                         }
-                        /* Esconde botões na impressão da nova janela */
-                        .print-btn, .btn-secondary, .tab-system, .header, .navigation { display: none !important; } 
                         .report-screen { display: block !important; padding: 0 !important; }
-                        
-                        /* Garante que o CSS de cores para impressão (para o modo pop-up) funcione */
-                        @media print {
-                            body * { visibility: visible !important; display: block !important; }
-                        }
+                        .print-btn, .btn-secondary, .navigation { display: none !important; }
                     </style>
                 </head>
                 <body>
@@ -1507,31 +1506,39 @@
                             </div>
                         </div>
                     </div>
-                    <script>
-                        // Aciona a impressão com atraso para estabilidade
-                        setTimeout(() => {
-                            window.print();
-                            // Tenta fechar a janela automaticamente (pode ser bloqueado)
-                            setTimeout(() => { window.close(); }, 1000);
-                        }, 500); // Atraso de 500ms
-                    </script>
                 </body>
                 </html>
             `;
-
-            // 4. Abre a nova janela/aba e insere o HTML
-            const printWindow = window.open("", "RelatorioFinal");
-            if (!printWindow) {
-                alert("O navegador bloqueou a abertura da janela. Por favor, desative o bloqueador de pop-ups (ou verifique o canto da tela) e tente novamente.");
-                return;
-            }
             
-            printWindow.document.write(finalReportHtml);
-            printWindow.document.close();
-            printWindow.focus();
+            // 4. Cria e configura o iFrame oculto
+            let iframe = document.createElement('iframe');
+            iframe.id = 'print-iframe';
+            iframe.style.position = 'absolute';
+            iframe.style.width = '0';
+            iframe.style.height = '0';
+            iframe.style.border = '0';
+            document.body.appendChild(iframe);
+            
+            // 5. Escreve o conteúdo e imprime no iFrame
+            iframe.onload = function() {
+                // É crucial que a impressão ocorra DENTRO do onload para garantir que o DOM esteja pronto
+                setTimeout(() => {
+                    iframe.contentWindow.focus();
+                    iframe.contentWindow.print();
+                    
+                    // Limpeza
+                    setTimeout(() => {
+                        document.body.removeChild(iframe);
+                    }, 500);
+                }, 300); // 300ms para estabilizar
+            };
+            
+            iframe.contentDocument.write(iframeContent);
+            iframe.contentDocument.close();
 
             // Volta a tela principal para a visualização do relatório
             generateReport(); 
+            alert("Preparando PDF do Relatório Final via iFrame. Se o diálogo de impressão não aparecer automaticamente, verifique o iFrame oculto.");
         }
 
         function newInterview() {
@@ -1645,7 +1652,7 @@
 
                 <div style="margin-top: 40px; padding-top: 20px; border-top: 2px solid #ddd; font-size: 12px; color: #999;">
                     <p>Relatório gerado em: ${new Date().toLocaleString('pt-BR')}</p>
-                    <p>Versão: 2.2 (Isolamento Total do PDF Final) | Sistema de Mapeamento Tecnológico</p>
+                    <p>Versão: 2.3 (iFrame Oculto para Impressão Final) | Sistema de Mapeamento Tecnológico</p>
                 </div>
             `;
             
