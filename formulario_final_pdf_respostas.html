@@ -401,9 +401,8 @@
             }
 
             /* 2. Regra para ISOLAR a impressão de SEÇÃO (quando #tempPrintSection está ativo) */
-            /* Oculta tudo no corpo, exceto o elemento temporário */
-            body > *:not(#tempPrintSection) {
-                 display: none !important;
+            body > *:not(.container) {
+                display: none !important;
             }
             #tempPrintSection {
                 display: block !important;
@@ -412,27 +411,22 @@
                 top: 0 !important;
                 width: 100% !important;
                 height: auto !important;
-                /* Garante que cores e backgrounds sejam impressos */
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
             }
             #tempPrintSection * {
-                color: #000 !important; /* Força cor do texto */
+                color: #000 !important;
                 background-color: transparent !important;
                 -webkit-print-color-adjust: exact; 
                 print-color-adjust: exact;
             }
-
             /* 3. Regra para a IMPRESSÃO FINAL (quando #reportScreen está ativo no .container) */
-            /* Esta regra garante que a tela de relatório esteja visível no contêiner */
-            .report-screen.active {
-                display: block !important;
-                padding: 0 !important; /* Remove padding que pode causar páginas em branco */
-            }
-
-            /* 4. Oculta todos os outros conteúdos no container, exceto o report-screen.active */
             .container > *:not(#reportScreen) {
                 display: none !important;
+            }
+            .report-screen.active {
+                display: block !important;
+                padding: 0 !important;
             }
             .container {
                 box-shadow: none !important;
@@ -1430,7 +1424,7 @@
                 const key = field.name;
                 const value = formData[key] || '';
                 
-                if (key === `entrevistado_${sectionId}`) return; // Exclui o nome do entrevistado desta seção do corpo de respostas
+                if (key === `entrevistado_${sectionId}`) return; 
                 
                 if (value && value.trim() !== '') {
                     const label = getFieldLabel(key, field);
@@ -1493,30 +1487,23 @@
         }
 
 
-        // --- FUNÇÃO CRÍTICA FINAL CORRIGIDA: GERA E IMPRIME O RELATÓRIO FINAL ---
+        // --- FUNÇÃO CRÍTICA FINAL: GERA E IMPRIME O RELATÓRIO FINAL ---
         
         function generateAndPrintFinalReport() {
-            // 1. Garante que o conteúdo de revisão esteja pronto e atualizado
-            reviewAnswers(true); 
-            
-            // 2. Garante que o Report Content esteja na tela
+            // 1. Garante que o Report Content esteja na tela e com os dados corretos
+            // O isSilent=true garante que não vamos travar a tela com a transição duplicada
             generateReport(true); 
 
-            // 3. Oculta os elementos de navegação e mostra apenas a tela de relatório
-            document.getElementById('reportScreen').classList.add('active');
-            document.getElementById('tabSystem').style.display = 'none';
-            document.getElementById('reviewScreen').classList.remove('active');
-            
-            // 4. Temporariamente oculta o elemento de impressão de seção para que o CSS de impressão final funcione
+            // 2. Oculta o elemento de impressão de seção para que o CSS de impressão final funcione
             document.getElementById('tempPrintSection').style.display = 'none';
 
-            // 5. Aciona a impressão (com atraso para estabilidade)
+            // 3. Aciona a impressão (com atraso para estabilidade)
             setTimeout(() => {
                 window.print();
                 
-                // 6. Restaura a visualização da tela
+                // 4. Restaura a visualização da tela
                 setTimeout(() => {
-                    // Não precisa mais mexer no display do container, apenas manter a tela de relatório ativa
+                    // Mantemos a tela de relatório ativa para o usuário.
                     document.getElementById('reportScreen').classList.add('active'); 
                 }, 500);
                 
@@ -1526,14 +1513,16 @@
         }
 
 
+        // CORREÇÃO APLICADA AQUI: Simplifica a lógica e garante que o review seja atualizado antes
         function generateReport(isSilent = false) {
-            // 1. Atualiza e mostra a tela de revisão
-            reviewAnswers(isSilent); 
+            // 1. Garante que o conteúdo de revisão esteja pronto. (silent=true para não tentar mostrar a tela de revisão, que já está visível ou deve ser ignorada)
+            reviewAnswers(true); 
 
-            // 2. Gera e mostra o relatório na tela principal
+            // 2. Calcula criticidades e monta o HTML do relatório.
             const criticidades = calculateCriticalities();
             const reportHTML = buildReport(criticidades);
 
+            // 3. Insere o HTML e faz a transição de tela.
             document.getElementById('reportContent').innerHTML = reportHTML;
             document.getElementById('reportScreen').classList.add('active');
             document.getElementById('reviewScreen').classList.remove('active');
@@ -1684,7 +1673,7 @@
 
                 <div style="margin-top: 40px; padding-top: 20px; border-top: 2px solid #ddd; font-size: 12px; color: #999; text-align: center;">
                     <p>Relatório gerado em: ${new Date().toLocaleString('pt-BR')}</p>
-                    <p>Versão: 3.1 (Correção Final de Impressão) | Sistema de Mapeamento Tecnológico</p>
+                    <p>Versão: 3.2 (Correção Final de Fluxo) | Sistema de Mapeamento Tecnológico</p>
                 </div>
             `;
             
