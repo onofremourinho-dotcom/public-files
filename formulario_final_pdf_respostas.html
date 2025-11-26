@@ -391,7 +391,7 @@
         
         /* Ajuste essencial para PDF/Impressão */
         #reviewSummaryForReport {
-            max-height: none !important; /* Desabilita limite na tela de relatório */
+            max-height: none !important; 
             overflow-y: visible !important;
             font-size: 12px;
             background: #f9f9f9;
@@ -399,62 +399,28 @@
             margin-top: 15px;
         }
         
-        /* Novo estilo para a tela de backup de etapa (janela pop-up) */
-        .backup-section-content {
-            padding: 20px;
-            max-width: 800px;
-            margin: 0 auto;
-        }
-        
-        .backup-section-content h1 {
-            color: var(--primary);
-            border-bottom: 2px solid var(--accent);
-            padding-bottom: 10px;
-        }
-        
-        .backup-item {
-            border: 1px solid #ddd;
-            padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 5px;
-        }
-        
-        .backup-item-title {
-            font-weight: bold;
-            color: var(--secondary);
-        }
-
-
+        /* Estilos de impressão para o backup da etapa (esconde o resto do app) */
         @media print {
-            body { background: white; padding: 0; }
-            .container { box-shadow: none; border-radius: 0; }
-            /* Esconder elementos de navegação e tela de formulário */
-            .header, .tab-system, .navigation, .print-btn, .btn-secondary, .review-screen, .content { display: none !important; }
-            
-            /* Garantir que apenas o relatório final apareça */
-            .report-screen { display: block !important; padding: 0 !important; }
-            .report-screen.active { display: block !important; }
-            #reportContent { display: block !important; }
-
-            /* Esconder botões de navegação no final do relatório (no print) */
-            .report-screen > div[style*="margin-top: 30px"] {
+            body > *:not(#tempPrintSection) {
                 display: none !important;
             }
-            
-            /* Correção mágica para o PDF: mostra todo o conteúdo */
-            #reviewSummaryForReport {
-                max-height: none !important;
-                overflow-y: visible !important;
+            #tempPrintSection {
+                display: block !important;
             }
-        }
-
-        @media (max-width: 768px) {
-            .container { border-radius: 0; }
-            .tab-system { flex-wrap: wrap; }
-            .tab-button { font-size: 12px; flex-basis: 33.3%; }
-            .header h1 { font-size: 24px; }
-            .btn { font-size: 14px; }
-            .content { padding: 20px; }
+            body { 
+                background: white; 
+                padding: 0; 
+                margin: 0;
+            }
+            .container { 
+                box-shadow: none; 
+                border-radius: 0; 
+            }
+            .backup-header { 
+                background: #1e3c72 !important; 
+                -webkit-print-color-adjust: exact; 
+                print-color-adjust: exact; 
+            }
         }
     </style>
 </head>
@@ -1196,8 +1162,8 @@
                 </div>
 
             <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #ddd;">
-                <button class="print-btn" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
-                <button class="btn btn-secondary" style="margin-left: 10px;" onclick="downloadPDF()">📥 Dica: Salvar PDF via Impressão</button>
+                <button class="print-btn" onclick="triggerPrint()">🖨️ Gerar PDF / Imprimir (FINAL)</button>
+                <button class="btn btn-secondary" style="margin-left: 10px;" onclick="downloadPDF()">❓ Dica: Salvar PDF via Impressão</button>
                 <button class="btn btn-secondary" style="margin-left: 10px;" onclick="newInterview()">🔄 Nova Entrevista (Limpar Dados)</button>
             </div>
         </div>
@@ -1273,7 +1239,6 @@
         function getFieldLabel(key, field) {
             let label = null;
             
-            // 1. Tenta buscar no mapa de labels específicos (Entrevistados, Data, Observações)
             const labelMap = {
                 'entrevistado_etapa1': '👤 Entrevistado - Etapa 1',
                 'entrevistado_etapa2': '👤 Entrevistado - Etapa 2',
@@ -1289,7 +1254,6 @@
             label = labelMap[key];
             if (label) return label;
 
-            // 2. Tenta buscar no form-label
             if (field) {
                 const formGroup = field.closest('.form-group');
                 if (formGroup) {
@@ -1300,7 +1264,6 @@
                 }
             }
 
-            // 3. Tenta buscar no question-title
             if (!label && field) {
                 const questionCard = field.closest('.question-card');
                 if(questionCard) {
@@ -1309,7 +1272,6 @@
                     const prefix = questionId ? questionId.innerText + ': ' : '';
                     const fieldLabelText = field.closest('.form-group').querySelector('.form-label') ? field.closest('.form-group').querySelector('.form-label').innerText.replace(/📝|📊|📡|⚙️|🖨️|🖥️|🔄|⚠️|⏱️/g, '').trim() : '';
 
-                    // Combina ID/Título + Label do campo
                     if (questionTitle) {
                         label = prefix + questionTitle.innerText + (fieldLabelText && !questionTitle.innerText.includes(fieldLabelText) ? ' (' + fieldLabelText + ')' : '');
                     }
@@ -1342,7 +1304,6 @@
             
             let reviewHTML = '';
             
-            // Pega todos os campos respondidos
             const allFields = document.querySelectorAll('input, textarea, select');
             
             allFields.forEach(field => {
@@ -1376,7 +1337,8 @@
             switchTab('etapa7');
         }
         
-        // --- NOVO MÉTODO PARA SALVAR POR ETAPA ---
+        // --- NOVO MÉTODO CORRIGIDO: Salva por Etapa SEM ABRIR NOVA ABA (Usa DOM Manipulation) ---
+
         function exportSectionAsHtml(sectionId, sectionTitle) {
             saveDataToLocalStorage(); 
             const section = document.getElementById(sectionId);
@@ -1391,80 +1353,95 @@
             
             const sectionFields = section.querySelectorAll('input, textarea, select');
             let reviewHTML = '';
-            let questionCards = [];
             
             // 1. Coleta e formata as respostas da seção
             sectionFields.forEach(field => {
                 const key = field.name;
                 const value = formData[key] || '';
                 
+                if (key === `entrevistado_${sectionId}`) return; 
+                
                 if (value && value.trim() !== '') {
                     const label = getFieldLabel(key, field);
                     const displayValue = getFieldDisplayValue(key, value, field);
 
-                    // Reúne o HTML de revisão (formato limpo)
                     reviewHTML += `
-                        <div class="review-item">
-                            <div class="review-item-title">${escapeHtml(label)}</div>
-                            <div class="review-item-value">${escapeHtml(displayValue)}</div>
+                        <div class="review-item" style="margin-bottom: 10px; padding: 10px; border-left: 4px solid #2a5298; background: #f0f7ff; border-radius: 4px;">
+                            <div class="review-item-title" style="font-weight: bold; color: #1e3c72; font-size: 13px; margin-bottom: 3px;">${escapeHtml(label)}</div>
+                            <div class="review-item-value" style="color: #333; font-size: 12px; white-space: pre-wrap;">${escapeHtml(displayValue)}</div>
                         </div>
                     `;
                 }
             });
             
             if (reviewHTML === '') {
-                alert('Atenção: Esta etapa não tem respostas preenchidas para salvar.');
+                alert('Atenção: Esta etapa não tem respostas preenchidas para salvar. Preencha os dados primeiro.');
                 return;
             }
 
-            // 2. Constrói o HTML de backup da etapa
-            const backupHTML = `
-                <style>
-                    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background: #f4f7f6; }
-                    .backup-section-content { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-                    .backup-header { background: #1e3c72; color: white; padding: 20px; border-radius: 6px 6px 0 0; margin: -30px -30px 20px -30px; }
-                    .backup-header h1 { font-size: 24px; margin: 0; }
-                    .backup-item { margin-bottom: 15px; padding: 15px; background: #f0f7ff; border-left: 4px solid #2a5298; border-radius: 4px; }
-                    .backup-item-title { font-weight: 600; color: #1e3c72; margin-bottom: 5px; font-size: 14px; }
-                    .backup-item-value { color: #333; font-size: 13px; white-space: pre-wrap; word-break: break-word; }
-                    .interviewee-info { background: #fff3cd; padding: 10px; border-radius: 4px; border-left: 4px solid #ff9800; margin-bottom: 20px; font-weight: bold; color: #333; }
-                    @media print {
-                        .backup-section-content { box-shadow: none; border: none; }
-                        .backup-header { background: #1e3c72 !important; print-color-adjust: exact; }
-                        /* Impressora ignora input de botão, mas vamos garantir */
-                        button { display: none !important; }
-                    }
-                </style>
-                <div class="backup-section-content">
-                    <div class="backup-header">
-                        <h1>Backup - Mapeamento Tecnológico</h1>
+            // 2. Cria o conteúdo temporário para impressão
+            const printContent = document.createElement('div');
+            printContent.id = 'tempPrintSection';
+            printContent.innerHTML = `
+                <div class="backup-section-content" style="padding: 20px; max-width: 800px; margin: 0 auto;">
+                    <div class="backup-header" style="background: #1e3c72; color: white; padding: 20px; border-radius: 6px 6px 0 0; margin-bottom: 20px; text-align: center;">
+                        <h1 style="font-size: 24px; margin: 0;">Backup - Mapeamento Tecnológico</h1>
                         <p>${escapeHtml(sectionTitle)}</p>
                     </div>
                     
-                    <div class="interviewee-info">
+                    <div class="interviewee-info" style="background: #fff3cd; padding: 10px; border-radius: 4px; border-left: 4px solid #ff9800; margin-bottom: 20px; font-weight: bold; color: #333; font-size: 14px;">
                         Entrevistado: ${escapeHtml(interviewedName)} | Data do Backup: ${new Date().toLocaleDateString('pt-BR')}
                     </div>
                     
                     ${reviewHTML}
                     
-                    <button onclick="window.print()" style="margin-top: 20px; padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">🖨️ Imprimir / Salvar como PDF</button>
-                    <p style="font-size: 11px; color: #666; margin-top: 15px;">Use a opção "Salvar como PDF" no destino da impressão para o backup.</p>
+                    <div style="margin-top: 30px; border-top: 1px solid #ddd; padding-top: 10px; font-size: 10px; color: #999; text-align: center;">
+                        Documento de Backup Gerado pelo Sistema de Mapeamento.
+                    </div>
                 </div>
             `;
-
-            // 3. Abre em nova aba para impressão estável
-            const win = window.open("", "_blank");
-            win.document.write(backupHTML);
-            win.document.close();
-            win.focus();
             
-            // Alerta o usuário para o próximo passo no celular
-            alert(`O backup da ${sectionTitle} foi aberto em uma nova aba. Por favor, use a função de impressão do seu navegador (geralmente nos 3 pontinhos) e selecione 'Salvar como PDF'.`);
-        }
-        // --- FIM DO NOVO MÉTODO ---
+            // 3. Temporariamente oculta o conteúdo principal e insere o conteúdo de impressão
+            // Esta lógica é necessária porque a media query @media print não é garantida em todos os navegadores/sistemas operacionais para ocultar o conteúdo principal.
+            const containerEl = document.querySelector('.container');
+            const originalDisplay = containerEl.style.display;
+            containerEl.style.display = 'none';
+            document.body.appendChild(printContent);
+            
+            // 4. Aciona a impressão (com atraso para estabilidade em mobile)
+            setTimeout(() => {
+                window.print();
+                
+                // 5. Restaura a visualização da tela
+                setTimeout(() => {
+                    document.body.removeChild(printContent);
+                    containerEl.style.display = originalDisplay;
+                    // Certifica-se que a aba correta está visível (que é a aba ativa antes de imprimir)
+                    document.querySelector('.content.active').style.display = 'block'; 
+                }, 500); 
+                
+            }, 300);
 
-        
+            alert(`Preparando PDF da ${sectionTitle}. Aguarde o diálogo de impressão aparecer e selecione "Salvar como PDF".`);
+        }
+
+
         // --- FUNÇÕES DE RELATÓRIO FINAL ---
+        
+        /**
+         * NOVO MÉTODO: Dispara a impressão do relatório final com um pequeno atraso.
+         * Isso ajuda navegadores móveis a processarem o CSS e o conteúdo dinâmico
+         * antes de abrir o diálogo de impressão, tornando o PDF mais estável.
+         */
+        function triggerPrint() {
+            alert('Preparando o Relatório Final. Aguarde o diálogo de impressão aparecer e selecione "Salvar como PDF".');
+            
+            // Pequeno atraso para garantir que a renderização do DOM esteja completa
+            setTimeout(() => {
+                window.print();
+            }, 300); // 300ms de atraso
+        }
+
 
         function generateReport() {
             const criticidades = calculateCriticalities();
@@ -1479,7 +1456,7 @@
         }
         
         function downloadPDF() {
-            alert('A janela de impressão será aberta. No celular, selecione "Salvar como PDF" nas opções de compartilhamento ou destino de impressão.');
+            alert('A geração do PDF é feita através da opção "Imprimir" do navegador. Após clicar no botão "Gerar PDF", você deve: 1. Abrir o menu do navegador (três pontos) ou compartilhar. 2. Selecionar "Imprimir" e mudar o destino para "Salvar como PDF".');
         }
 
         function newInterview() {
@@ -1489,7 +1466,7 @@
             }
         }
 
-        // --- LÓGICA DO RELATÓRIO ---
+        // --- LÓGICA DO RELATÓRIO (CRITICIDADES) ---
 
         function calculateCriticalities() {
             saveDataToLocalStorage(); 
@@ -1510,20 +1487,16 @@
         function calculateGapCriticality(fieldName, expectedImpact) {
             const value = formData[fieldName] || '';
             const criticalityMap = {
-                // Frequência de erros, Qualidade Wi-Fi, Críticidade do equipamento, Plano de DR, Risco de dados (R1, R2, R4, R15, R16, R17)
                 'critico': 5, 'ruim': 4, 'frequente': 4, 'nao': 5, '4': 5, 
                 'ocasional': 3, 'medio': 3, 'existe': 3, 'parcial': 3, '3': 4,
                 'raro': 2, 'bom': 2, '75': 2, '2': 3,
                 'nenhum': 1, 'excelente': 1, '100': 1, 'testado': 1, '1': 1,
-                // Automação (R5, R7, R11, R13)
                 '0': 5, '25': 4, '50': 3, '75': 2, '100': 1,
-                // Integração (R6, R12)
                 'manual': 5, 'batch-diario': 4, 'batch-60': 4, 'batch-30': 3, 'batch-5': 2, 'real-time': 1,
             };
             
             let critValue = criticalityMap[value] || 1;
             
-            // Mapeamento específico para criticidade de risco (R17)
             if (fieldName === 'r17_risco') {
                  const riskMap = { '4': 5, '3': 4, '2': 3, '1': 1 };
                  critValue = riskMap[value] || 1;
@@ -1597,7 +1570,7 @@
 
                 <div style="margin-top: 40px; padding-top: 20px; border-top: 2px solid #ddd; font-size: 12px; color: #999;">
                     <p>Relatório gerado em: ${new Date().toLocaleString('pt-BR')}</p>
-                    <p>Versão: 1.5 (Backup por Etapa Corrigido) | Sistema de Mapeamento Tecnológico</p>
+                    <p>Versão: 1.6 (Corrigido para PDF Mobile) | Sistema de Mapeamento Tecnológico</p>
                 </div>
             `;
             
