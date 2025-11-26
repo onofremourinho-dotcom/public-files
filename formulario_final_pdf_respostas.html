@@ -404,12 +404,28 @@
             margin-top: 15px;
         }
 
-        /* --- CSS DE IMPRESSÃO (Mantemos apenas para a impressão de etapas) --- */
+        /* --- CSS DE IMPRESSÃO (Regras para isolar o conteúdo a ser impresso) --- */
         @media print {
-            /* Regras para o Backup de Etapa (#tempPrintSection) */
-            body > *:not(#tempPrintSection) {
+            /* 1. Esconde TUDO do corpo, exceto o container principal */
+            body > *:not(.container) {
                 display: none !important;
             }
+            /* 2. Garante que a tela de relatório esteja visível (mas sem botões) */
+            .container, #reportScreen.active {
+                display: block !important;
+                box-shadow: none !important;
+                background: white !important;
+                padding: 0;
+                margin: 0;
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+            /* 3. Esconde todos os controles de tela/web no relatório final */
+            .navigation, .tab-system, .header, .print-section-btn, .print-btn, .btn-secondary {
+                display: none !important;
+            }
+             /* 4. Regras para o Backup de Etapa (#tempPrintSection) */
+            /* Essas regras garantem que apenas a seção temporária seja impressa, se estiver em uso */
             #tempPrintSection {
                 display: block !important;
                 position: absolute !important;
@@ -417,6 +433,10 @@
                 top: 0 !important;
                 width: 100% !important;
                 height: auto !important;
+                z-index: 9999;
+            }
+            body > *:not(#tempPrintSection) {
+                 visibility: hidden; /* Use visibility para não quebrar o layout */
             }
             /* Garante que o texto apareça */
             #tempPrintSection * {
@@ -1176,7 +1196,7 @@
             <h2 style="color: var(--primary); margin-bottom: 20px;">🔍 Revisão das Respostas</h2>
 
             <div class="review-summary" id="reviewContent">
-                </div>
+            </div>
 
             <div class="navigation">
                 <button type="button" class="btn btn-secondary" onclick="backToForm()">← Corrigir Dados</button>
@@ -1186,7 +1206,7 @@
 
         <div id="reportScreen" class="report-screen">
             <div id="reportContent">
-                </div>
+            </div>
 
             <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #ddd;">
                 <button class="print-btn" onclick="generateAndPrintFinalReport()">🖨️ Gerar PDF / Imprimir (FINAL)</button>
@@ -1194,16 +1214,18 @@
             </div>
         </div>
     </div>
+    
+    <div id="tempPrintSection" style="display: none;"></div> 
 
     <script>
-        const STORAGE_KEY = 'currentSurveyData'; 
-        let formData = {}; 
+        const STORAGE_KEY = 'currentSurveyData';
+        let formData = {};
 
         // --- INICIALIZAÇÃO ---
         document.addEventListener('DOMContentLoaded', () => {
-             loadDataFromLocalStorage(); 
-             attachAutoSave(); 
-             updateRiskMatrix(); 
+            loadDataFromLocalStorage();
+            attachAutoSave();
+            updateRiskMatrix();
         });
         
         // --- FUNÇÕES DE SALVAMENTO ---
@@ -1213,23 +1235,28 @@
             document.querySelectorAll('form, .content').forEach(container => {
                 container.querySelectorAll('input, textarea, select').forEach(field => {
                     if (field.name) {
-                        currentData[field.name] = field.value; 
+                        currentData[field.name] = field.value;
                     }
                 });
             });
             localStorage.setItem(STORAGE_KEY, JSON.stringify(currentData));
-            formData = currentData; 
+            formData = currentData;
         }
 
         function loadDataFromLocalStorage() {
             const savedData = localStorage.getItem(STORAGE_KEY);
             if (!savedData) {
-                document.getElementById('dataEntrevista').valueAsDate = new Date(); 
+                // Define a data atual se não houver dados salvos
+                const today = new Date();
+                const dd = String(today.getDate()).padStart(2, '0');
+                const mm = String(today.getMonth() + 1).padStart(2, '0'); // Janeiro é 0
+                const yyyy = today.getFullYear();
+                document.getElementById('dataEntrevista').value = `${yyyy}-${mm}-${dd}`;
                 return;
             }
             
             const data = JSON.parse(savedData);
-            formData = data; 
+            formData = data;
             
             for (const [key, value] of Object.entries(data)) {
                 const field = document.getElementsByName(key)[0];
@@ -1249,7 +1276,7 @@
         // --- NAVEGAÇÃO E REVISÃO ---
 
         function switchTab(tabId) {
-            saveDataToLocalStorage(); 
+            saveDataToLocalStorage();
             
             document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
@@ -1296,21 +1323,38 @@
                     const questionTitle = questionCard.querySelector('.question-title');
                     const questionId = questionCard.querySelector('.question-id');
                     const prefix = questionId ? questionId.innerText + ': ' : '';
-                    const fieldLabelText = field.closest('.form-group').querySelector('.form-label') ? field.closest('.form-group').querySelector('.form-label').innerText.replace(/📝|📊|📡|⚙️|🖨️|🖥️|🔄|⚠️|⏱️/g, '').trim() : '';
+                    const fieldLabelText = field.closest('.form-group') && field.closest('.form-group').querySelector('.form-label') ? field.closest('.form-group').querySelector('.form-label').innerText.replace(/📝|📊|📡|⚙️|🖨️|🖥️|🔄|⚠️|⏱️/g, '').trim() : '';
 
                     if (questionTitle) {
-                        label = prefix + questionTitle.innerText + (fieldLabelText && !questionTitle.innerText.includes(fieldLabelText) ? ' (' + fieldLabelText + ')' : '');
+                        // Tenta combinar o título da pergunta com o label do campo, se for relevante
+                        let baseTitle = questionTitle.innerText;
+                        
+                        // Ajuste específico para campos de seleção/input dentro da card
+                        if (fieldLabelText && !baseTitle.includes(fieldLabelText) && 
+                            fieldLabelText !== '📝 Descreva o processo' && fieldLabelText !== '📝 Descreva o estado dos equipamentos' && fieldLabelText !== '📝 Descreva a infraestrutura') {
+                            baseTitle += ' (' + fieldLabelText + ')';
+                        }
+                        
+                        label = prefix + baseTitle;
                     }
                 }
             }
             
-            return label || key.toUpperCase(); 
+            return label || key.toUpperCase();
         }
         
         function getFieldDisplayValue(key, field) {
             let value = formData[key] || '';
             let displayValue = value;
-            if (field && field.tagName === 'SELECT') {
+            if (key === 'data_entrevista' && value) {
+                 try {
+                    // Formata a data de yyyy-mm-dd para dd/mm/yyyy
+                    const [year, month, day] = value.split('-');
+                    return `${day}/${month}/${year}`;
+                } catch (e) {
+                    return value; // Retorna o valor original se a formatação falhar
+                }
+            } else if (field && field.tagName === 'SELECT') {
                 const selectedOption = field.options[field.selectedIndex];
                 if (selectedOption) {
                     displayValue = selectedOption.text;
@@ -1319,12 +1363,13 @@
             return displayValue;
         }
 
-        function reviewAnswers() {
-            saveDataToLocalStorage(); 
+        // Ajustada para ser re-utilizável (reviewAnswers(true) para uso silencioso)
+        function reviewAnswers(silent = false) {
+            saveDataToLocalStorage();
             
             const savedData = localStorage.getItem(STORAGE_KEY);
             if (!savedData) {
-                alert('Erro: Não foi possível ler os dados salvos.');
+                if (!silent) alert('Erro: Não foi possível ler os dados salvos.');
                 return;
             }
             formData = JSON.parse(savedData);
@@ -1337,6 +1382,9 @@
                 const key = field.name;
                 const value = formData[key] || '';
                 
+                // Exclui campos de entrevista para evitar duplicação no review final, eles serão tratados no topo do relatório
+                if (key && key.startsWith('entrevistado_')) return; 
+
                 if (value && value.trim() !== '') {
                     const label = getFieldLabel(key, field);
                     const displayValue = getFieldDisplayValue(key, field);
@@ -1351,11 +1399,13 @@
             });
 
             document.getElementById('reviewContent').innerHTML = reviewHTML;
-            document.getElementById('reviewScreen').classList.add('active');
-            document.getElementById('tabSystem').style.display = 'none';
-            document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
-
-            window.scrollTo({top: 0, behavior: 'smooth'});
+            
+            if (!silent) {
+                document.getElementById('reviewScreen').classList.add('active');
+                document.getElementById('tabSystem').style.display = 'none';
+                document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+                window.scrollTo({top: 0, behavior: 'smooth'});
+            }
         }
 
         function backToForm() {
@@ -1364,10 +1414,10 @@
             switchTab('etapa7');
         }
         
-        // --- MÉTODO CORRIGIDO: Salva por Etapa (Injeta e Imprime) ---
+        // --- MÉTODO PARA IMPRESSÃO DE SEÇÃO (Backup) ---
 
         function exportSectionAsHtml(sectionId, sectionTitle) {
-            saveDataToLocalStorage(); 
+            saveDataToLocalStorage();
             const section = document.getElementById(sectionId);
             
             if (!section) {
@@ -1375,7 +1425,7 @@
                 return;
             }
 
-            const intervieweField = section.querySelector(`input[name="entrevistado_${sectionId}"]`);
+            const intervieweField = document.querySelector(`input[name="entrevistado_${sectionId}"]`);
             const interviewedName = intervieweField ? intervieweField.value || 'NÃO INFORMADO' : 'NÃO INFORMADO';
             
             const sectionFields = section.querySelectorAll('input, textarea, select');
@@ -1385,7 +1435,7 @@
                 const key = field.name;
                 const value = formData[key] || '';
                 
-                if (key === `entrevistado_${sectionId}`) return; 
+                if (key === `entrevistado_${sectionId}`) return; // Exclui o nome do entrevistado desta seção do corpo de respostas
                 
                 if (value && value.trim() !== '') {
                     const label = getFieldLabel(key, field);
@@ -1405,11 +1455,10 @@
                 return;
             }
 
-            // 2. Cria o conteúdo temporário para impressão
-            const printContent = document.createElement('div');
-            printContent.id = 'tempPrintSection';
+            // 2. Cria o conteúdo temporário para impressão usando o elemento `#tempPrintSection`
+            const printContent = document.getElementById('tempPrintSection');
             printContent.innerHTML = `
-                <div class="backup-section-content" style="padding: 20px; max-width: 800px; margin: 0 auto;">
+                <div class="backup-section-content" style="padding: 20px; max-width: 800px; margin: 0 auto; background: white;">
                     <div class="backup-header" style="background: #1e3c72; color: white; padding: 20px; border-radius: 6px 6px 0 0; margin-bottom: 20px; text-align: center;">
                         <h1 style="font-size: 24px; margin: 0;">Backup - Mapeamento Tecnológico</h1>
                         <p>${escapeHtml(sectionTitle)}</p>
@@ -1427,22 +1476,23 @@
                 </div>
             `;
             
-            // 3. Temporariamente oculta o conteúdo principal e insere o conteúdo de impressão
+            // 3. Temporariamente oculta o conteúdo principal
             const containerEl = document.querySelector('.container');
             const originalContainerDisplay = containerEl.style.display;
             const originalBodyBackground = document.body.style.background;
             
             containerEl.style.display = 'none';
-            document.body.style.background = 'white'; 
-            document.body.appendChild(printContent);
+            document.body.style.background = 'white';
+            printContent.style.display = 'block'; // Mostra o conteúdo para impressão
             
-            // 4. Aciona a impressão (com atraso para estabilidade em mobile)
+            // 4. Aciona a impressão 
             setTimeout(() => {
                 window.print();
                 
                 // 5. Restaura a visualização da tela
                 setTimeout(() => {
-                    document.body.removeChild(printContent);
+                    printContent.style.display = 'none'; // Esconde o conteúdo temporário
+                    printContent.innerHTML = ''; // Limpa
                     containerEl.style.display = originalContainerDisplay;
                     document.body.style.background = originalBodyBackground;
                     document.getElementById(sectionId).classList.add('active'); 
@@ -1454,73 +1504,68 @@
         }
 
 
-        // --- FUNÇÃO CRÍTICA FINAL: GERA E IMPRIME O RELATÓRIO FINAL EM NOVA JANELA ---
+        // --- FUNÇÃO CRÍTICA FINAL CORRIGIDA: GERA E IMPRIME O RELATÓRIO FINAL ---
         
         function generateAndPrintFinalReport() {
-            // 1. Gera o HTML do relatório final usando a função existente
+            // 1. Garante que o conteúdo de revisão esteja pronto e atualizado
+            reviewAnswers(true); 
+            
+            // 2. Gera o HTML do relatório final
             const criticidades = calculateCriticalities();
-            const reportHTML = buildReport(criticidades);
+            let reportHTML = buildReport(criticidades);
 
-            // 2. Coleta o estilo de impressão necessário (para replicar o look)
-            const style = document.querySelector('style').innerHTML;
+            // 3. Pega o conteúdo de revisão já formatado para inclusão no relatório final
+            const reviewSummaryForReportContent = document.getElementById('reviewContent') ? 
+                                                document.getElementById('reviewContent').innerHTML : 
+                                                '';
 
-            // 3. Cria o HTML completo para a nova janela
-            const finalReportHtml = `
-                <!DOCTYPE html>
-                <html lang="pt-BR">
-                <head>
-                    <meta charset="UTF-8">
-                    <title>Relatório Final - Mapeamento Tecnológico</title>
-                    <style>${style}</style>
-                    <style>
-                        /* Força o novo corpo a ter um layout limpo */
-                        body { 
-                            padding: 20px !important;
-                            background: white !important;
-                            max-width: 1000px !important;
-                            margin: 0 auto !important;
-                            box-shadow: none !important;
-                        }
-                        /* Oculta apenas os botões de navegação e controles no PDF final */
-                        .print-btn, .btn-secondary, .tab-system, .header { display: none !important; } 
-                        /* Garante que o conteúdo do relatório seja exibido */
-                        .report-screen { display: block !important; padding: 0 !important; }
-                    </style>
-                </head>
-                <body>
-                    <div class="report-screen active" style="padding: 0;">
-                        <div id="reportContent">
-                            ${reportHTML}
-                        </div>
-                    </div>
-                    <script>
-                        // Aciona a impressão com atraso para estabilidade
-                        setTimeout(() => {
-                            window.print();
-                            // Tenta fechar a janela automaticamente (pode ser bloqueado)
-                            setTimeout(() => { window.close(); }, 500);
-                        }, 300);
-                    </script>
-                </body>
-                </html>
+            // 4. Cria o conteúdo temporário para impressão usando o elemento `#tempPrintSection`
+            const printContent = document.getElementById('tempPrintSection');
+            printContent.innerHTML = `
+                <div class="report-container" style="max-width: 1000px; margin: 0 auto; padding: 20px; background: white;">
+                    ${reportHTML}
+                </div>
             `;
-
-            // 4. Abre a nova janela/aba e insere o HTML
-            const printWindow = window.open("", "RelatorioFinal", "height=800,width=800,scrollbars=yes");
-            if (!printWindow) {
-                alert("O navegador bloqueou a abertura da janela. Por favor, desative o bloqueador de pop-ups e tente novamente.");
-                return;
+            
+            // 5. Injeta o conteúdo da revisão (que foi gerado no passo 1) no local correto do HTML de impressão
+            const tempReportReviewEl = printContent.querySelector('#reviewSummaryForReport');
+            if (tempReportReviewEl) {
+                tempReportReviewEl.innerHTML = reviewSummaryForReportContent;
             }
             
-            printWindow.document.write(finalReportHtml);
-            printWindow.document.close();
-            printWindow.focus();
+            // 6. Temporariamente oculta o conteúdo principal
+            const containerEl = document.querySelector('.container');
+            const originalContainerDisplay = containerEl.style.display;
+            const originalBodyBackground = document.body.style.background;
+            
+            containerEl.style.display = 'none';
+            document.body.style.background = 'white';
+            printContent.style.display = 'block';
+
+            // 7. Aciona a impressão (com atraso para estabilidade)
+            setTimeout(() => {
+                window.print();
+                
+                // 8. Restaura a visualização da tela
+                setTimeout(() => {
+                    printContent.style.display = 'none';
+                    printContent.innerHTML = '';
+                    containerEl.style.display = originalContainerDisplay;
+                    document.body.style.background = originalBodyBackground;
+                    document.getElementById('reportScreen').classList.add('active');
+                }, 500);
+                
+            }, 300);
+
+            alert(`Preparando PDF do Relatório Final. Aguarde o diálogo de impressão aparecer e selecione "Salvar como PDF".`);
         }
 
-        // A função triggerPrint() original foi substituída pela generateAndPrintFinalReport()
 
         function generateReport() {
-            // Este botão não deve mais imprimir, apenas preparar a tela de relatório na tela principal
+            // 1. Atualiza e mostra a tela de revisão (silent=false)
+            reviewAnswers(false); 
+
+            // 2. Gera e mostra o relatório na tela principal
             const criticidades = calculateCriticalities();
             const reportHTML = buildReport(criticidades);
 
@@ -1542,98 +1587,146 @@
         // --- LÓGICA DO RELATÓRIO (CRITICIDADES) ---
 
         function calculateCriticalities() {
-            saveDataToLocalStorage(); 
+            saveDataToLocalStorage();
             
             const criticidades = {};
-            criticidades.r1 = calculateGapCriticality('r1_frequencia', 'Alto'); 
-            criticidades.r4 = calculateGapCriticality('r4_qualidade', 'Alto'); 
+            // R1: Recebimento NF-e - Frequência de erros
+            criticidades.r1 = calculateGapCriticality('r1_frequencia', 'Alto');
+            // R4: Wi-Fi Conferência - Qualidade geral
+            criticidades.r4 = calculateGapCriticality('r4_qualidade', 'Alto');
+            // R16: DR Plan - Plano de Disaster Recovery
             criticidades.r16 = calculateGapCriticality('r16_dr', 'Crítico');
-            criticidades.r2 = calculateGapCriticality('r2_wifi', 'Medio'); 
-            criticidades.r5 = calculateGapCriticality('r5_automacao', 'Alto'); 
+            // R2: Wi-Fi Portaria - Qualidade
+            criticidades.r2 = calculateGapCriticality('r2_wifi', 'Medio');
+            // R5: Conferência ABC - Nível de automação
+            criticidades.r5 = calculateGapCriticality('r5_automacao', 'Alto');
+            // R11: Picking - Nível de automação
             criticidades.r11 = calculateGapCriticality('r11_automacao', 'Alto');
+            // R13: Inventário - Nível de automação
             criticidades.r13 = calculateGapCriticality('r13_automacao', 'Medio');
+            // R15: Coletores - Criticidade do estado
             criticidades.r15 = calculateGapCriticality('r15_criticidade', 'Alto');
+            // R17: Sistemas Satélites - Risco de perda de dados
             criticidades.r17 = calculateGapCriticality('r17_risco', 'Medio');
+
             return criticidades;
         }
 
         function calculateGapCriticality(fieldName, expectedImpact) {
-            const value = formData[fieldName] || '';
+            const value = (formData[fieldName] || '').toLowerCase();
+            
+            // Mapeia valores de formulário para um nível de criticidade (1 a 5)
             const criticalityMap = {
-                'critico': 5, 'ruim': 4, 'frequente': 4, 'nao': 5, '4': 5, 
-                'ocasional': 3, 'medio': 3, 'existe': 3, 'parcial': 3, '3': 4,
-                'raro': 2, 'bom': 2, '75': 2, '2': 3,
-                'nenhum': 1, 'excelente': 1, '100': 1, 'testado': 1, '1': 1,
-                '0': 5, '25': 4, '50': 3, '75': 2, '100': 1,
-                'manual': 5, 'batch-diario': 4, 'batch-60': 4, 'batch-30': 3, 'batch-5': 2, 'real-time': 1,
+                // Alto/Crítico (4-5)
+                'critico': 5, 'ruim': 4, 'frequente': 4, 'nao': 5, '4': 5, '5': 5, 'menos75': 5, '0': 5, 
+                'manual': 5, 'batch-diario': 4, 'batch-60': 4, '25': 4,
+                // Médio (3)
+                'ocasional': 3, 'medio': 3, 'existe': 3, 'parcial': 3, '3': 3, 'batch-30': 3, '50': 3,
+                // Baixo (1-2)
+                'raro': 2, 'bom': 2, '75': 2, '2': 2, 'batch-5': 2, '95': 2,
+                'nenhum': 1, 'excelente': 1, '100': 1, 'testado': 1, '1': 1, 'real-time': 1,
             };
             
             let critValue = criticalityMap[value] || 1;
             
+            // Mapeamento específico para R17_risco, se necessário
             if (fieldName === 'r17_risco') {
-                 const riskMap = { '4': 5, '3': 4, '2': 3, '1': 1 };
-                 critValue = riskMap[value] || 1;
+                const riskMap = { '4': 5, '3': 4, '2': 3, '1': 1 };
+                critValue = riskMap[value] || 1;
             }
             
+            // Se a automação for baixa (0-25), o risco é Alto (4-5)
+             if (fieldName === 'r5_automacao' || fieldName === 'r11_automacao') {
+                if (value === '0') critValue = 5; 
+                if (value === '25') critValue = 4;
+            }
+
             return critValue;
         }
 
-        function buildReport(criticidades) {
-            const data = formData.data_entrevista || new Date().toLocaleDateString('pt-BR');
+        function getCriticityLabel(value) {
+            if (value >= 4) return 'alto'; 
+            if (value >= 3) return 'medio';
+            return 'baixo';
+        }
 
+        function buildReport(criticidades) {
+            const data = getFieldDisplayValue('data_entrevista', document.getElementsByName('data_entrevista')[0]) || 'N/A';
+
+            // Coleta os entrevistados
+            let entrevistados = '';
+            for (let i = 1; i <= 7; i++) {
+                const fieldName = `entrevistado_etapa${i}`;
+                const nome = formData[fieldName] || 'N/A';
+                entrevistados += `<li>**Etapa ${i}:** ${escapeHtml(nome)}</li>`;
+            }
+            
             const createGapRow = (etapa, id, titulo, impacto) => {
                 const critValue = criticidades[id] || 1;
-                if (critValue <= 2) return ''; 
+                if (critValue <= 2) return ''; // Exclui criticidades Baixas
                 const label = getCriticityLabel(critValue);
                 return `
                     <tr>
                         <td>${etapa}</td>
                         <td>${id.toUpperCase()}</td>
-                        <td>${titulo}</td>
+                        <td style="text-align: left;">${titulo}</td>
                         <td><span class="gap-criticality criticality-${label}">${label.toUpperCase()} (${critValue})</span></td>
-                        <td>${impacto}</td>
+                        <td style="text-align: left;">${impacto}</td>
                     </tr>`;
             };
 
             let html = `
                 <div class="report-title">📊 MAPEAMENTO TECNOLÓGICO - RELATÓRIO EXECUTIVO</div>
 
+                <div class="report-section" style="border: 2px solid #ddd; padding: 20px; border-radius: 8px;">
+                     <div class="report-section-title" style="border-left-color: var(--info);">Sumário do Mapeamento</div>
+                     <p><strong>Local:</strong> Planta Tatuí | <strong>Foco:</strong> Recebimento & Expedição</p>
+                     <p><strong>Data de Referência:</strong> ${escapeHtml(data)}</p>
+                     <br>
+                     <p><strong>Entrevistados:</strong></p>
+                     <ul style="list-style-type: none; padding-left: 0; font-size: 13px;">${entrevistados}</ul>
+                </div>
+
                 <div class="report-section">
                     <div class="report-section-title">🎯 Gaps e Criticidades Identificados (Priorizados)</div>
+                    <p style="font-size: 13px; margin-bottom: 10px; color: #666;">Apenas gaps com Criticidade Média (3) ou Alta (4-5) estão listados abaixo.</p>
                     <table class="risk-matrix">
-                        <tr>
-                            <th>Etapa</th>
-                            <th>ID</th>
-                            <th>Gap Identificado</th>
-                            <th>Criticidade</th>
-                            <th>Impacto</th>
-                        </tr>
-                        ${createGapRow(1, 'r1', 'Integração NF-e com Cockpit', 'Alto - Atraso em todo processo de recebimento')}
-                        ${createGapRow(1, 'r2', 'Qualidade Wi-Fi Portaria', 'Médio - Atraso de registro')}
-                        ${createGapRow(2, 'r4', 'Cobertura Wi-Fi Almoxarifado', 'Alto - Paralisa operações')}
-                        ${createGapRow(2, 'r5', 'Nível de Automação Conferência ABC', 'Alto - Impacta acuracidade de estoque')}
-                        ${createGapRow(4, 'r11', 'Nível de Automação Picking', 'Alto - Impacta faturamento e satisfação do cliente')}
-                        ${createGapRow(5, 'r13', 'Nível de Automação Inventário', 'Médio - Impacta fechamento contábil')}
-                        ${createGapRow(6, 'r15', 'Estado dos Coletores/PDA', 'Alto - Paralisa operações')}
-                        ${createGapRow(6, 'r16', 'Plano de Disaster Recovery (DR)', 'Crítico - Paralisa toda operação')}
-                        ${createGapRow(6, 'r17', 'Risco de "Sistemas Satélite" (Planilhas)', 'Médio - Falta de rastreabilidade e risco de dados')}
+                        <thead>
+                            <tr>
+                                <th>Etapa</th>
+                                <th>ID</th>
+                                <th style="width: 35%;">Gap Identificado</th>
+                                <th>Criticidade</th>
+                                <th style="width: 35%;">Impacto</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${createGapRow(1, 'r1', 'Integração NF-e (Cockpit Edoc) com erros/atrasos', 'Alto - Atraso em todo processo de recebimento')}
+                            ${createGapRow(1, 'r2', 'Qualidade da Conexão Wi-Fi na Portaria', 'Médio - Atraso de registro')}
+                            ${createGapRow(2, 'r4', 'Cobertura Wi-Fi no Almoxarifado (Pontos Cegos)', 'Alto - Paralisa operações de conferência')}
+                            ${createGapRow(2, 'r5', 'Baixo Nível de Automação na Conferência ABC', 'Alto - Impacta acuracidade de estoque')}
+                            ${createGapRow(4, 'r11', 'Baixo Nível de Automação no Picking/Separação', 'Alto - Impacta faturamento e satisfação do cliente')}
+                            ${createGapRow(5, 'r13', 'Baixo Nível de Automação/Scanner no Inventário', 'Médio - Impacta fechamento contábil')}
+                            ${createGapRow(6, 'r15', 'Estado de Conservação dos Coletores/PDA', 'Alto - Paralisa operações se houver quebra')}
+                            ${createGapRow(6, 'r16', 'Ausência ou Falha no Plano de Disaster Recovery (DR)', 'Crítico - Paralisa toda operação de TI')}
+                            ${createGapRow(6, 'r17', 'Uso de "Sistemas Satélite" (Planilhas) não oficiais', 'Médio - Falta de rastreabilidade e risco de dados')}
+                        </tbody>
                     </table>
                 </div>
 
                 <div class="report-section">
                     <div class="report-section-title">🔧 Recomendações Imediatas (Baseado nos Gaps)</div>
                     <ul style="margin-left: 20px;">
-                        <li><strong>(Crítico) R16:</strong> Definir e testar **urgentemente** um Plano de Disaster Recovery para sistemas críticos.</li>
-                        <li><strong>(Alto) R1, R4, R15:</strong> Realizar **site survey de Wi-Fi** no Almoxarifado e Portaria para eliminar pontos cegos; auditar integração de NF-e; planejar **substituição** ou reparo de PDAs obsoletos.</li>
-                        <li><strong>(Alto) R5, R11:** Mapear processos de conferência e picking para identificar gargalos de automação e iniciar projeto de uso de coletores 100% via sistema (WMS).</li>
-                        <li>**(**Médio) R17:** Inventariar todas as planilhas "satélite" e avaliar migração imediata para sistemas oficiais (ex: Power BI, Power Apps) para **mitigar risco de perda de dados**.</li>
+                        <li><strong>(Crítico) R16:</strong> Definir e testar **urgentemente** um Plano de Disaster Recovery para sistemas críticos, com foco em restauração rápida.</li>
+                        <li><strong>(Alto) R4, R1:</strong> Realizar **site survey de Wi-Fi** detalhado no Almoxarifado e Portaria; auditar e corrigir falhas de **integração NF-e**.</li>
+                        <li><strong>(Alto) R5, R11, R15:</strong> Iniciar projeto de **automação** de processos (Conferência ABC e Picking) migrando para coletores 100% via sistema (WMS). Planejar **substituição** ou reparo de PDAs com falhas frequentes.</li>
+                        <li><strong>(Médio) R17:</strong> Inventariar todas as planilhas "satélite" e migrar dados críticos para o sistema ERP/WMS ou plataformas controladas (ex: Power Apps) para **mitigar risco de perda de dados**.</li>
                     </ul>
                 </div>
 
                 <div class="report-section">
-                    <div class="report-section-title">📍 Resumo das Respostas (Incluindo Entrevistados)</div>
-                    <div class="review-item" style="background: #fdfdfd;">
-                        <strong>Data do Mapeamento:</strong> ${escapeHtml(data)}<br>
+                    <div class="report-section-title">📍 Resumo Detalhado das Respostas</div>
+                    <div class="review-item" style="background: #fdfdfd; margin-bottom: 20px;">
                         <strong>Observações Finais:</strong> ${escapeHtml(formData.observacoes_finais || 'N/A')}
                     </div>
                     
@@ -1641,33 +1734,13 @@
                         </div>
                 </div>
 
-                <div style="margin-top: 40px; padding-top: 20px; border-top: 2px solid #ddd; font-size: 12px; color: #999;">
+                <div style="margin-top: 40px; padding-top: 20px; border-top: 2px solid #ddd; font-size: 12px; color: #999; text-align: center;">
                     <p>Relatório gerado em: ${new Date().toLocaleString('pt-BR')}</p>
-                    <p>Versão: 2.2 (Isolamento Total do PDF Final) | Sistema de Mapeamento Tecnológico</p>
+                    <p>Versão: 3.0 (Corrigido para Impressão Final) | Sistema de Mapeamento Tecnológico</p>
                 </div>
             `;
             
-            setTimeout(() => {
-                const reviewHTML = document.getElementById('reviewContent').innerHTML;
-                const reportReviewEl = document.getElementById('reviewSummaryForReport');
-                if (reportReviewEl) {
-                    reportReviewEl.innerHTML = reviewHTML;
-                    const itemsToRemove = reportReviewEl.querySelectorAll('.review-item-title');
-                    itemsToRemove.forEach(item => {
-                        if (item.innerText.includes('Data de Preenchimento') || item.innerText.includes('Observações Finais')) {
-                            item.closest('.review-item').style.display = 'none';
-                        }
-                    });
-                }
-            }, 0);
-
             return html;
-        }
-
-        function getCriticityLabel(value) {
-            if (value >= 4) return 'alto'; 
-            if (value >= 3) return 'medio';
-            return 'baixo';
         }
 
         function escapeHtml(text) {
@@ -1679,6 +1752,7 @@
 
         function updateRiskMatrix() {
             saveDataToLocalStorage();
+            // A matriz de risco é calculada apenas na geração do relatório, então esta função apenas salva os dados.
         }
 
     </script>
