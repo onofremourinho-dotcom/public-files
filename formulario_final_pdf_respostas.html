@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mapeamento Tecnológico - Recebimento & Expedição</title>
     <style>
-        /* [Seu CSS Original - Com correções e ajustes para impressão] */
+        /* [Seu CSS Original - Mantido para Layout] */
         * {
             margin: 0;
             padding: 0;
@@ -54,14 +54,13 @@
             opacity: 0.95;
         }
         
-        /* CORREÇÃO CRÍTICA MOBILE: Habilita rolagem na barra de abas */
         .tab-system {
             display: flex;
             background: #f5f5f5;
             border-bottom: 2px solid #ddd;
-            overflow-x: auto; /* Permite rolar horizontalmente */
-            white-space: nowrap; /* Impede quebras de linha */
-            -webkit-overflow-scrolling: touch; /* Melhora a rolagem em iOS */
+            overflow-x: auto; 
+            white-space: nowrap; 
+            -webkit-overflow-scrolling: touch; 
         }
 
         .tab-button {
@@ -329,14 +328,6 @@
             font-weight: bold;
         }
 
-        .gap-item {
-            margin-bottom: 15px;
-            padding: 12px;
-            background: #fff3cd;
-            border-left: 4px solid #ff9800;
-            border-radius: 4px;
-        }
-
         .gap-criticality {
             display: inline-block;
             padding: 4px 10px;
@@ -361,9 +352,8 @@
             margin: 20px 0;
         }
         
-        /* NOVO ESTILO PARA O BOTÃO DE PDF DE ETAPA */
         .print-section-btn {
-            background: #5A5A5A; /* Cor cinza mais neutra */
+            background: #5A5A5A;
             color: white;
             border: none;
             padding: 8px 15px;
@@ -394,7 +384,6 @@
             transition: width 0.3s ease;
         }
         
-        /* Ajuste essencial para PDF/Impressão */
         #reviewSummaryForReport {
             max-height: none !important; 
             overflow-y: visible !important;
@@ -404,28 +393,18 @@
             margin-top: 15px;
         }
 
-        /* --- CSS DE IMPRESSÃO (Regras para isolar o conteúdo a ser impresso) --- */
+        /* --- CORREÇÃO CRÍTICA DO CSS DE IMPRESSÃO --- */
         @media print {
-            /* 1. Esconde TUDO do corpo, exceto o container principal */
-            body > *:not(.container) {
-                display: none !important;
-            }
-            /* 2. Garante que a tela de relatório esteja visível (mas sem botões) */
-            .container, #reportScreen.active {
-                display: block !important;
-                box-shadow: none !important;
-                background: white !important;
-                padding: 0;
-                margin: 0;
-                width: 100% !important;
-                max-width: 100% !important;
-            }
-            /* 3. Esconde todos os controles de tela/web no relatório final */
+            /* 1. Oculta os elementos de navegação e controles, independente do que está ativo */
             .navigation, .tab-system, .header, .print-section-btn, .print-btn, .btn-secondary {
                 display: none !important;
             }
-             /* 4. Regras para o Backup de Etapa (#tempPrintSection) */
-            /* Essas regras garantem que apenas a seção temporária seja impressa, se estiver em uso */
+
+            /* 2. Regra para ISOLAR a impressão de SEÇÃO (quando #tempPrintSection está ativo) */
+            /* Oculta tudo no corpo, exceto o elemento temporário */
+            body > *:not(#tempPrintSection) {
+                 display: none !important;
+            }
             #tempPrintSection {
                 display: block !important;
                 position: absolute !important;
@@ -433,17 +412,35 @@
                 top: 0 !important;
                 width: 100% !important;
                 height: auto !important;
-                z-index: 9999;
+                /* Garante que cores e backgrounds sejam impressos */
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
             }
-            body > *:not(#tempPrintSection) {
-                 visibility: hidden; /* Use visibility para não quebrar o layout */
-            }
-            /* Garante que o texto apareça */
             #tempPrintSection * {
-                color: #000 !important;
+                color: #000 !important; /* Força cor do texto */
                 background-color: transparent !important;
                 -webkit-print-color-adjust: exact; 
                 print-color-adjust: exact;
+            }
+
+            /* 3. Regra para a IMPRESSÃO FINAL (quando #reportScreen está ativo no .container) */
+            /* Esta regra garante que a tela de relatório esteja visível no contêiner */
+            .report-screen.active {
+                display: block !important;
+                padding: 0 !important; /* Remove padding que pode causar páginas em branco */
+            }
+
+            /* 4. Oculta todos os outros conteúdos no container, exceto o report-screen.active */
+            .container > *:not(#reportScreen) {
+                display: none !important;
+            }
+            .container {
+                box-shadow: none !important;
+                background: white !important;
+                padding: 0 !important;
+                margin: 0 auto !important;
+                width: 100% !important;
+                max-width: 100% !important;
             }
         }
 
@@ -1326,10 +1323,8 @@
                     const fieldLabelText = field.closest('.form-group') && field.closest('.form-group').querySelector('.form-label') ? field.closest('.form-group').querySelector('.form-label').innerText.replace(/📝|📊|📡|⚙️|🖨️|🖥️|🔄|⚠️|⏱️/g, '').trim() : '';
 
                     if (questionTitle) {
-                        // Tenta combinar o título da pergunta com o label do campo, se for relevante
                         let baseTitle = questionTitle.innerText;
                         
-                        // Ajuste específico para campos de seleção/input dentro da card
                         if (fieldLabelText && !baseTitle.includes(fieldLabelText) && 
                             fieldLabelText !== '📝 Descreva o processo' && fieldLabelText !== '📝 Descreva o estado dos equipamentos' && fieldLabelText !== '📝 Descreva a infraestrutura') {
                             baseTitle += ' (' + fieldLabelText + ')';
@@ -1476,14 +1471,9 @@
                 </div>
             `;
             
-            // 3. Temporariamente oculta o conteúdo principal
-            const containerEl = document.querySelector('.container');
-            const originalContainerDisplay = containerEl.style.display;
-            const originalBodyBackground = document.body.style.background;
-            
-            containerEl.style.display = 'none';
-            document.body.style.background = 'white';
-            printContent.style.display = 'block'; // Mostra o conteúdo para impressão
+            // 3. Temporariamente oculta o conteúdo principal e mostra o temporário
+            document.querySelector('.container').style.display = 'none';
+            printContent.style.display = 'block'; 
             
             // 4. Aciona a impressão 
             setTimeout(() => {
@@ -1493,8 +1483,7 @@
                 setTimeout(() => {
                     printContent.style.display = 'none'; // Esconde o conteúdo temporário
                     printContent.innerHTML = ''; // Limpa
-                    containerEl.style.display = originalContainerDisplay;
-                    document.body.style.background = originalBodyBackground;
+                    document.querySelector('.container').style.display = 'block'; // Mostra o container
                     document.getElementById(sectionId).classList.add('active'); 
                 }, 500); 
                 
@@ -1510,49 +1499,25 @@
             // 1. Garante que o conteúdo de revisão esteja pronto e atualizado
             reviewAnswers(true); 
             
-            // 2. Gera o HTML do relatório final
-            const criticidades = calculateCriticalities();
-            let reportHTML = buildReport(criticidades);
+            // 2. Garante que o Report Content esteja na tela
+            generateReport(true); 
 
-            // 3. Pega o conteúdo de revisão já formatado para inclusão no relatório final
-            const reviewSummaryForReportContent = document.getElementById('reviewContent') ? 
-                                                document.getElementById('reviewContent').innerHTML : 
-                                                '';
+            // 3. Oculta os elementos de navegação e mostra apenas a tela de relatório
+            document.getElementById('reportScreen').classList.add('active');
+            document.getElementById('tabSystem').style.display = 'none';
+            document.getElementById('reviewScreen').classList.remove('active');
+            
+            // 4. Temporariamente oculta o elemento de impressão de seção para que o CSS de impressão final funcione
+            document.getElementById('tempPrintSection').style.display = 'none';
 
-            // 4. Cria o conteúdo temporário para impressão usando o elemento `#tempPrintSection`
-            const printContent = document.getElementById('tempPrintSection');
-            printContent.innerHTML = `
-                <div class="report-container" style="max-width: 1000px; margin: 0 auto; padding: 20px; background: white;">
-                    ${reportHTML}
-                </div>
-            `;
-            
-            // 5. Injeta o conteúdo da revisão (que foi gerado no passo 1) no local correto do HTML de impressão
-            const tempReportReviewEl = printContent.querySelector('#reviewSummaryForReport');
-            if (tempReportReviewEl) {
-                tempReportReviewEl.innerHTML = reviewSummaryForReportContent;
-            }
-            
-            // 6. Temporariamente oculta o conteúdo principal
-            const containerEl = document.querySelector('.container');
-            const originalContainerDisplay = containerEl.style.display;
-            const originalBodyBackground = document.body.style.background;
-            
-            containerEl.style.display = 'none';
-            document.body.style.background = 'white';
-            printContent.style.display = 'block';
-
-            // 7. Aciona a impressão (com atraso para estabilidade)
+            // 5. Aciona a impressão (com atraso para estabilidade)
             setTimeout(() => {
                 window.print();
                 
-                // 8. Restaura a visualização da tela
+                // 6. Restaura a visualização da tela
                 setTimeout(() => {
-                    printContent.style.display = 'none';
-                    printContent.innerHTML = '';
-                    containerEl.style.display = originalContainerDisplay;
-                    document.body.style.background = originalBodyBackground;
-                    document.getElementById('reportScreen').classList.add('active');
+                    // Não precisa mais mexer no display do container, apenas manter a tela de relatório ativa
+                    document.getElementById('reportScreen').classList.add('active'); 
                 }, 500);
                 
             }, 300);
@@ -1561,9 +1526,9 @@
         }
 
 
-        function generateReport() {
-            // 1. Atualiza e mostra a tela de revisão (silent=false)
-            reviewAnswers(false); 
+        function generateReport(isSilent = false) {
+            // 1. Atualiza e mostra a tela de revisão
+            reviewAnswers(isSilent); 
 
             // 2. Gera e mostra o relatório na tela principal
             const criticidades = calculateCriticalities();
@@ -1574,7 +1539,9 @@
             document.getElementById('reviewScreen').classList.remove('active');
             document.getElementById('tabSystem').style.display = 'none';
 
-            window.scrollTo({top: 0, behavior: 'smooth'});
+            if (!isSilent) {
+                window.scrollTo({top: 0, behavior: 'smooth'});
+            }
         }
 
         function newInterview() {
@@ -1590,23 +1557,14 @@
             saveDataToLocalStorage();
             
             const criticidades = {};
-            // R1: Recebimento NF-e - Frequência de erros
             criticidades.r1 = calculateGapCriticality('r1_frequencia', 'Alto');
-            // R4: Wi-Fi Conferência - Qualidade geral
             criticidades.r4 = calculateGapCriticality('r4_qualidade', 'Alto');
-            // R16: DR Plan - Plano de Disaster Recovery
             criticidades.r16 = calculateGapCriticality('r16_dr', 'Crítico');
-            // R2: Wi-Fi Portaria - Qualidade
             criticidades.r2 = calculateGapCriticality('r2_wifi', 'Medio');
-            // R5: Conferência ABC - Nível de automação
             criticidades.r5 = calculateGapCriticality('r5_automacao', 'Alto');
-            // R11: Picking - Nível de automação
             criticidades.r11 = calculateGapCriticality('r11_automacao', 'Alto');
-            // R13: Inventário - Nível de automação
             criticidades.r13 = calculateGapCriticality('r13_automacao', 'Medio');
-            // R15: Coletores - Criticidade do estado
             criticidades.r15 = calculateGapCriticality('r15_criticidade', 'Alto');
-            // R17: Sistemas Satélites - Risco de perda de dados
             criticidades.r17 = calculateGapCriticality('r17_risco', 'Medio');
 
             return criticidades;
@@ -1615,7 +1573,6 @@
         function calculateGapCriticality(fieldName, expectedImpact) {
             const value = (formData[fieldName] || '').toLowerCase();
             
-            // Mapeia valores de formulário para um nível de criticidade (1 a 5)
             const criticalityMap = {
                 // Alto/Crítico (4-5)
                 'critico': 5, 'ruim': 4, 'frequente': 4, 'nao': 5, '4': 5, '5': 5, 'menos75': 5, '0': 5, 
@@ -1629,13 +1586,11 @@
             
             let critValue = criticalityMap[value] || 1;
             
-            // Mapeamento específico para R17_risco, se necessário
             if (fieldName === 'r17_risco') {
                 const riskMap = { '4': 5, '3': 4, '2': 3, '1': 1 };
                 critValue = riskMap[value] || 1;
             }
             
-            // Se a automação for baixa (0-25), o risco é Alto (4-5)
              if (fieldName === 'r5_automacao' || fieldName === 'r11_automacao') {
                 if (value === '0') critValue = 5; 
                 if (value === '25') critValue = 4;
@@ -1644,16 +1599,9 @@
             return critValue;
         }
 
-        function getCriticityLabel(value) {
-            if (value >= 4) return 'alto'; 
-            if (value >= 3) return 'medio';
-            return 'baixo';
-        }
-
         function buildReport(criticidades) {
             const data = getFieldDisplayValue('data_entrevista', document.getElementsByName('data_entrevista')[0]) || 'N/A';
 
-            // Coleta os entrevistados
             let entrevistados = '';
             for (let i = 1; i <= 7; i++) {
                 const fieldName = `entrevistado_etapa${i}`;
@@ -1663,7 +1611,7 @@
             
             const createGapRow = (etapa, id, titulo, impacto) => {
                 const critValue = criticidades[id] || 1;
-                if (critValue <= 2) return ''; // Exclui criticidades Baixas
+                if (critValue <= 2) return ''; 
                 const label = getCriticityLabel(critValue);
                 return `
                     <tr>
@@ -1736,11 +1684,20 @@
 
                 <div style="margin-top: 40px; padding-top: 20px; border-top: 2px solid #ddd; font-size: 12px; color: #999; text-align: center;">
                     <p>Relatório gerado em: ${new Date().toLocaleString('pt-BR')}</p>
-                    <p>Versão: 3.0 (Corrigido para Impressão Final) | Sistema de Mapeamento Tecnológico</p>
+                    <p>Versão: 3.1 (Correção Final de Impressão) | Sistema de Mapeamento Tecnológico</p>
                 </div>
             `;
             
+            // Corrige o resumo de revisão antes de retornar
+            document.getElementById('reviewSummaryForReport').innerHTML = document.getElementById('reviewContent').innerHTML;
+            
             return html;
+        }
+
+        function getCriticityLabel(value) {
+            if (value >= 4) return 'alto'; 
+            if (value >= 3) return 'medio';
+            return 'baixo';
         }
 
         function escapeHtml(text) {
@@ -1752,7 +1709,6 @@
 
         function updateRiskMatrix() {
             saveDataToLocalStorage();
-            // A matriz de risco é calculada apenas na geração do relatório, então esta função apenas salva os dados.
         }
 
     </script>
