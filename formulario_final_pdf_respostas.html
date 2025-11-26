@@ -1456,67 +1456,69 @@
 
         // --- FUNÇÃO CRÍTICA FINAL: GERA E IMPRIME O RELATÓRIO FINAL EM NOVA JANELA ---
         
-        function generateAndPrintFinalReport() {
-            // 1. Gera o HTML do relatório final usando a função existente
-            const criticidades = calculateCriticalities();
-            const reportHTML = buildReport(criticidades);
+function generateAndPrintFinalReport() {
+    saveDataToLocalStorage();
 
-            // 2. Coleta o estilo de impressão necessário (para replicar o look)
-            const style = document.querySelector('style').innerHTML;
+    const criticidades = calculateCriticalities();
+    const reportHTML = buildReport(criticidades);
 
-            // 3. Cria o HTML completo para a nova janela
-            const finalReportHtml = `
-                <!DOCTYPE html>
-                <html lang="pt-BR">
-                <head>
-                    <meta charset="UTF-8">
-                    <title>Relatório Final - Mapeamento Tecnológico</title>
-                    <style>${style}</style>
-                    <style>
-                        /* Força o novo corpo a ter um layout limpo */
-                        body { 
-                            padding: 20px !important;
-                            background: white !important;
-                            max-width: 1000px !important;
-                            margin: 0 auto !important;
-                            box-shadow: none !important;
-                        }
-                        /* Oculta apenas os botões de navegação e controles no PDF final */
-                        .print-btn, .btn-secondary, .tab-system, .header { display: none !important; } 
-                        /* Garante que o conteúdo do relatório seja exibido */
-                        .report-screen { display: block !important; padding: 0 !important; }
-                    </style>
-                </head>
-                <body>
-                    <div class="report-screen active" style="padding: 0;">
-                        <div id="reportContent">
-                            ${reportHTML}
-                        </div>
-                    </div>
-                    <script>
-                        // Aciona a impressão com atraso para estabilidade
-                        setTimeout(() => {
-                            window.print();
-                            // Tenta fechar a janela automaticamente (pode ser bloqueado)
-                            setTimeout(() => { window.close(); }, 500);
-                        }, 300);
-                    </script>
-                </body>
-                </html>
-            `;
+    // CSS do formulário principal
+    const styleBlocks = Array.from(document.querySelectorAll("style"))
+        .map(s => s.innerHTML)
+        .join("\n");
 
-            // 4. Abre a nova janela/aba e insere o HTML
-            const printWindow = window.open("", "RelatorioFinal", "height=800,width=800,scrollbars=yes");
-            if (!printWindow) {
-                alert("O navegador bloqueou a abertura da janela. Por favor, desative o bloqueador de pop-ups e tente novamente.");
-                return;
-            }
-            
-            printWindow.document.write(finalReportHtml);
-            printWindow.document.close();
+    // Abre janela com HTML inicial básico
+    const printWindow = window.open("", "_blank");
+
+    printWindow.document.open();
+    printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Relatório Final</title>
+
+            <style>
+                ${styleBlocks}
+
+                /* Ajustes específicos do PDF final */
+                body {
+                    background: white !important;
+                    padding: 20px !important;
+                    max-width: 1000px;
+                    margin: 0 auto;
+                }
+
+                .tab-system, .header, .print-btn, .btn-secondary {
+                    display: none !important;
+                }
+
+                .report-screen {
+                    display: block !important;
+                    padding: 0 !important;
+                }
+            </style>
+        </head>
+
+        <body>
+            <div id="reportContent"></div>
+        </body>
+        </html>
+    `);
+    printWindow.document.close();
+
+    // Espera a nova janela renderizar
+    printWindow.onload = () => {
+        const target = printWindow.document.querySelector("#reportContent");
+        target.innerHTML = reportHTML; // injeta o relatório pronto
+
+        setTimeout(() => {
             printWindow.focus();
-        }
-
+            printWindow.print();
+            setTimeout(() => printWindow.close(), 300);
+        }, 300);
+    };
+}
         // A função triggerPrint() original foi substituída pela generateAndPrintFinalReport()
 
         function generateReport() {
