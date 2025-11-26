@@ -398,28 +398,66 @@
             padding-top: 10px;
             margin-top: 15px;
         }
-        
-        /* Estilos de impressão para o backup da etapa (esconde o resto do app) */
+
+        /* --- CORREÇÃO DO CSS DE IMPRESSÃO (Print Media Query) --- */
         @media print {
+            /* Regras para o Relatório Final (#reportScreen) */
+            body > *:not(.report-screen) {
+                display: none !important;
+            }
+            .report-screen {
+                display: block !important;
+                padding: 0 !important; 
+                width: 100%;
+                margin: 0;
+                box-shadow: none;
+            }
+            #reportContent { 
+                display: block !important; 
+            }
+            .container { 
+                box-shadow: none; 
+                border-radius: 0; 
+                overflow: visible !important;
+                width: 100%;
+                max-width: none;
+                margin: 0;
+            }
+            .report-screen > div[style*="margin-top: 30px"] {
+                display: none !important; /* Esconde botões de navegação no final do relatório */
+            }
+            
+            /* Regras para o Backup de Etapa (#tempPrintSection) - Garante que apenas ele aparece quando injetado */
             body > *:not(#tempPrintSection) {
                 display: none !important;
             }
             #tempPrintSection {
                 display: block !important;
-            }
-            body { 
-                background: white; 
-                padding: 0; 
                 margin: 0;
-            }
-            .container { 
-                box-shadow: none; 
-                border-radius: 0; 
+                padding: 0;
             }
             .backup-header { 
                 background: #1e3c72 !important; 
                 -webkit-print-color-adjust: exact; 
                 print-color-adjust: exact; 
+            }
+            
+        }
+
+        /* --- CORREÇÃO DO CSS MOBILE --- */
+        @media (max-width: 768px) {
+            .container { border-radius: 0; }
+            .tab-system { flex-wrap: wrap; }
+            /* Garante que os botões de tabulação ocupem a tela */
+            .tab-button { font-size: 12px; flex-basis: 33.3%; } 
+            .header h1 { font-size: 24px; }
+            .btn { font-size: 14px; }
+            .content { padding: 20px; }
+            
+            /* Garante rolagem do resumo na tela de Revisão, se necessário */
+            #reviewContent { 
+                max-height: 400px;
+                overflow-y: auto;
             }
         }
     </style>
@@ -1337,7 +1375,7 @@
             switchTab('etapa7');
         }
         
-        // --- NOVO MÉTODO CORRIGIDO: Salva por Etapa SEM ABRIR NOVA ABA (Usa DOM Manipulation) ---
+        // --- MÉTODO CORRIGIDO: Salva por Etapa (Injeta e Imprime) ---
 
         function exportSectionAsHtml(sectionId, sectionTitle) {
             saveDataToLocalStorage(); 
@@ -1354,7 +1392,6 @@
             const sectionFields = section.querySelectorAll('input, textarea, select');
             let reviewHTML = '';
             
-            // 1. Coleta e formata as respostas da seção
             sectionFields.forEach(field => {
                 const key = field.name;
                 const value = formData[key] || '';
@@ -1402,10 +1439,12 @@
             `;
             
             // 3. Temporariamente oculta o conteúdo principal e insere o conteúdo de impressão
-            // Esta lógica é necessária porque a media query @media print não é garantida em todos os navegadores/sistemas operacionais para ocultar o conteúdo principal.
             const containerEl = document.querySelector('.container');
-            const originalDisplay = containerEl.style.display;
+            const originalContainerDisplay = containerEl.style.display;
+            const originalBodyBackground = document.body.style.background;
+            
             containerEl.style.display = 'none';
+            document.body.style.background = 'white'; // Fundo branco para impressão
             document.body.appendChild(printContent);
             
             // 4. Aciona a impressão (com atraso para estabilidade em mobile)
@@ -1415,9 +1454,10 @@
                 // 5. Restaura a visualização da tela
                 setTimeout(() => {
                     document.body.removeChild(printContent);
-                    containerEl.style.display = originalDisplay;
-                    // Certifica-se que a aba correta está visível (que é a aba ativa antes de imprimir)
-                    document.querySelector('.content.active').style.display = 'block'; 
+                    containerEl.style.display = originalContainerDisplay;
+                    document.body.style.background = originalBodyBackground;
+                    // Garante que a etapa correta está visível (importante após manipular o DOM)
+                    document.getElementById(sectionId).classList.add('active'); 
                 }, 500); 
                 
             }, 300);
@@ -1428,18 +1468,12 @@
 
         // --- FUNÇÕES DE RELATÓRIO FINAL ---
         
-        /**
-         * NOVO MÉTODO: Dispara a impressão do relatório final com um pequeno atraso.
-         * Isso ajuda navegadores móveis a processarem o CSS e o conteúdo dinâmico
-         * antes de abrir o diálogo de impressão, tornando o PDF mais estável.
-         */
         function triggerPrint() {
             alert('Preparando o Relatório Final. Aguarde o diálogo de impressão aparecer e selecione "Salvar como PDF".');
             
-            // Pequeno atraso para garantir que a renderização do DOM esteja completa
             setTimeout(() => {
                 window.print();
-            }, 300); // 300ms de atraso
+            }, 300); 
         }
 
 
@@ -1451,6 +1485,7 @@
             document.getElementById('reportScreen').classList.add('active');
             document.getElementById('reviewScreen').classList.remove('active');
             document.getElementById('tabSystem').style.display = 'none';
+            document.querySelector('.container').style.boxShadow = 'none'; /* Remove sombra no relatório final */
 
             window.scrollTo({top: 0, behavior: 'smooth'});
         }
@@ -1570,7 +1605,7 @@
 
                 <div style="margin-top: 40px; padding-top: 20px; border-top: 2px solid #ddd; font-size: 12px; color: #999;">
                     <p>Relatório gerado em: ${new Date().toLocaleString('pt-BR')}</p>
-                    <p>Versão: 1.6 (Corrigido para PDF Mobile) | Sistema de Mapeamento Tecnológico</p>
+                    <p>Versão: 1.7 (Estabilidade Final e Mobile Otimizado) | Sistema de Mapeamento Tecnológico</p>
                 </div>
             `;
             
