@@ -442,6 +442,30 @@
                 top: 0 !important;
                 width: 100% !important;
             }
+
+            /* 4. Garante que o fundo da impressão seja branco */
+            body, .container {
+                background: white !important;
+            }
+            
+            /* Garante que o texto seja preto e os fundos das caixas sejam claros para visualização */
+            * {
+                color: #000 !important;
+                background-color: transparent !important;
+                -webkit-print-color-adjust: exact; /* Tenta preservar cores dos backgrounds */
+                print-color-adjust: exact;
+            }
+
+            /* Força os elementos de cabeçalho e caixas de resumo a terem um fundo claro */
+            .header, .backup-header, .review-item, .impacto-info, .section-interviewee, .question-card {
+                background-color: #f0f0f0 !important; 
+                -webkit-print-color-adjust: exact; 
+                print-color-adjust: exact;
+            }
+            
+            .report-title, .report-section-title {
+                color: var(--primary) !important;
+            }
         }
 
         /* --- CORREÇÃO DO CSS MOBILE (TAB BAR) --- */
@@ -1476,6 +1500,7 @@
         
         /**
          * Aciona a impressão do relatório final com um pequeno atraso (300ms).
+         * Este atraso é crucial para a estabilidade em navegadores móveis.
          */
         function triggerPrint() {
             // 1. Garante que o Relatório Final está visível/ativo
@@ -1485,8 +1510,8 @@
             
             // 2. Oculta os botões de navegação da tela de relatório (para PDF limpo)
             const navButtons = document.querySelector('#reportScreen > div:last-child');
-            const originalNavDisplay = navButtons.style.display;
-            navButtons.style.display = 'none';
+            const originalNavDisplay = navButtons ? navButtons.style.display : 'flex';
+            if (navButtons) navButtons.style.display = 'none';
             
             // 3. Dispara a impressão com atraso para estabilizar em mobile
             setTimeout(() => {
@@ -1494,7 +1519,7 @@
                 
                 // 4. Restaura o estado da tela após a impressão
                 setTimeout(() => {
-                    navButtons.style.display = originalNavDisplay; 
+                    if (navButtons) navButtons.style.display = originalNavDisplay; 
                 }, 100);
             }, 300); 
         }
@@ -1623,7 +1648,7 @@
 
                 <div style="margin-top: 40px; padding-top: 20px; border-top: 2px solid #ddd; font-size: 12px; color: #999;">
                     <p>Relatório gerado em: ${new Date().toLocaleString('pt-BR')}</p>
-                    <p>Versão: 2.0 (Finalização da Impressão) | Sistema de Mapeamento Tecnológico</p>
+                    <p>Versão: 2.1 (Ajuste Final de CSS de Impressão) | Sistema de Mapeamento Tecnológico</p>
                 </div>
             `;
             
