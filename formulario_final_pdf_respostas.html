@@ -404,31 +404,49 @@
             margin-top: 15px;
         }
 
-        /* --- CSS DE IMPRESSÃO (Focado no iFrame e Backup de Etapa) --- */
+        /* --- CORREÇÃO DO CSS DE IMPRESSÃO (Print Media Query) --- */
         @media print {
-            /* Esconde todo o corpo principal exceto o iFrame temporário OU o backup de etapa */
-            body > *:not(#print-iframe):not(#tempPrintSection) {
+            /* Esconde tudo que não for o ReportScreen OU o TempPrintSection */
+            body > *:not(.report-screen):not(#tempPrintSection) {
                 display: none !important;
             }
             
-            /* Regras gerais de impressão para iFrame e backup de etapa */
-            #print-iframe,
+            .report-screen {
+                display: block !important;
+                padding: 0 !important; 
+                width: 100%;
+                margin: 0;
+                box-shadow: none;
+            }
+            .container { 
+                box-shadow: none; 
+                border-radius: 0; 
+                overflow: visible !important;
+                width: 100%;
+                max-width: none;
+                margin: 0;
+            }
+            .report-screen > div[style*="margin-top: 30px"] {
+                display: none !important; /* Esconde botões de navegação no final do relatório */
+            }
+            
+            /* Regras para o Backup de Etapa (#tempPrintSection) */
             #tempPrintSection {
                 display: block !important;
-                position: fixed !important;
-                left: 0 !important;
-                top: 0 !important;
-                width: 100% !important;
-                height: 100% !important;
-                z-index: 9999 !important;
+                position: fixed; 
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
             }
-
-            /* Garante que o texto e as caixas de cor saiam corretamente no PDF */
-            * {
-                color: #000 !important;
+            .backup-header { 
+                background: #1e3c72 !important; 
                 -webkit-print-color-adjust: exact; 
-                print-color-adjust: exact;
+                print-color-adjust: exact; 
             }
+            
         }
 
         /* --- CORREÇÃO DO CSS MOBILE (TAB BAR) --- */
@@ -441,8 +459,8 @@
                 -webkit-overflow-scrolling: touch;
             }
             .tab-button { 
-                flex-shrink: 0; 
-                min-width: 120px; 
+                flex-shrink: 0; /* Impede que os botões encolham */
+                min-width: 120px; /* Garante tamanho suficiente para rolagem */
                 font-size: 12px;
             }
             .header h1 { font-size: 24px; }
@@ -1194,7 +1212,7 @@
                 </div>
 
             <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #ddd;">
-                <button class="print-btn" onclick="generateAndPrintFinalReport()">🖨️ Gerar PDF / Imprimir (FINAL)</button>
+                <button class="print-btn" onclick="triggerPrint()">🖨️ Gerar PDF / Imprimir (FINAL)</button>
                 <button class="btn btn-secondary" style="margin-left: 10px;" onclick="newInterview()">🔄 Nova Entrevista (Limpar Dados)</button>
             </div>
         </div>
@@ -1312,8 +1330,7 @@
             return label || key.toUpperCase(); 
         }
         
-        function getFieldDisplayValue(key, field) {
-            let value = formData[key] || '';
+        function getFieldDisplayValue(key, value, field) {
             let displayValue = value;
             if (field && field.tagName === 'SELECT') {
                 const selectedOption = field.options[field.selectedIndex];
@@ -1344,7 +1361,7 @@
                 
                 if (value && value.trim() !== '') {
                     const label = getFieldLabel(key, field);
-                    const displayValue = getFieldDisplayValue(key, field);
+                    const displayValue = getFieldDisplayValue(key, value, field);
 
                     reviewHTML += `
                         <div class="review-item">
@@ -1394,7 +1411,7 @@
                 
                 if (value && value.trim() !== '') {
                     const label = getFieldLabel(key, field);
-                    const displayValue = getFieldDisplayValue(key, field);
+                    const displayValue = getFieldDisplayValue(key, value, field);
 
                     reviewHTML += `
                         <div class="review-item" style="margin-bottom: 10px; padding: 10px; border-left: 4px solid #2a5298; background: #f0f7ff; border-radius: 4px;">
@@ -1459,87 +1476,47 @@
         }
 
 
-        // --- FUNÇÃO CRÍTICA FINAL: GERA E IMPRIME O RELATÓRIO FINAL VIA IFRAME OCULTO (Versão 2.3) ---
+        // --- FUNÇÕES DE RELATÓRIO FINAL ---
         
-        function generateAndPrintFinalReport() {
-            // 1. Gera o HTML do relatório final
+        /**
+         * Aciona a impressão do relatório final com um pequeno atraso (300ms).
+         * Este atraso é crucial para a estabilidade em navegadores móveis.
+         */
+        function triggerPrint() {
+            // Garante que o ReportScreen está visível e ativo antes de imprimir
+            document.getElementById('reportScreen').classList.add('active');
+            document.querySelector('.container').style.boxShadow = 'none'; 
+            
+            // Oculta os botões de navegação da tela de relatório, garantindo que o PDF seja limpo
+            const navButtons = document.querySelector('#reportScreen > div:last-child');
+            const originalNavDisplay = navButtons.style.display;
+            navButtons.style.display = 'none';
+            
+            setTimeout(() => {
+                window.print();
+                
+                // Restaura o estado da tela após a impressão
+                setTimeout(() => {
+                    document.querySelector('.container').style.boxShadow = '0 20px 60px rgba(0,0,0,0.3)';
+                    navButtons.style.display = originalNavDisplay; 
+                }, 100);
+            }, 300); 
+        }
+
+
+        function generateReport() {
             const criticidades = calculateCriticalities();
             const reportHTML = buildReport(criticidades);
 
-            // 2. Coleta o CSS COMPLETO da página
-            let styleContent = '';
-            document.querySelectorAll('style').forEach(style => {
-                styleContent += style.innerHTML;
-            });
-            
-            // 3. Monta o HTML isolado para o iFrame
-            const iframeContent = `
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <meta charset="UTF-8">
-                    <title>Relatório Final</title>
-                    <style>${styleContent}</style>
-                    <style>
-                        /* Força a impressão do conteúdo no iFrame */
-                        body { 
-                            padding: 20px; 
-                            background: white; 
-                            width: 100%; 
-                            margin: 0;
-                        }
-                        .container { 
-                            max-width: 1000px;
-                            margin: 0 auto;
-                            box-shadow: none;
-                            overflow: visible;
-                        }
-                        .report-screen { display: block !important; padding: 0 !important; }
-                        .print-btn, .btn-secondary, .navigation { display: none !important; }
-                    </style>
-                </head>
-                <body>
-                    <div class="container">
-                        <div class="report-screen active" style="padding: 0;">
-                            <div id="reportContent">
-                                ${reportHTML}
-                            </div>
-                        </div>
-                    </div>
-                </body>
-                </html>
-            `;
-            
-            // 4. Cria e configura o iFrame oculto
-            let iframe = document.createElement('iframe');
-            iframe.id = 'print-iframe';
-            iframe.style.position = 'absolute';
-            iframe.style.width = '0';
-            iframe.style.height = '0';
-            iframe.style.border = '0';
-            document.body.appendChild(iframe);
-            
-            // 5. Escreve o conteúdo e imprime no iFrame
-            iframe.onload = function() {
-                // É crucial que a impressão ocorra DENTRO do onload para garantir que o DOM esteja pronto
-                setTimeout(() => {
-                    iframe.contentWindow.focus();
-                    iframe.contentWindow.print();
-                    
-                    // Limpeza
-                    setTimeout(() => {
-                        document.body.removeChild(iframe);
-                    }, 500);
-                }, 300); // 300ms para estabilizar
-            };
-            
-            iframe.contentDocument.write(iframeContent);
-            iframe.contentDocument.close();
+            document.getElementById('reportContent').innerHTML = reportHTML;
+            document.getElementById('reportScreen').classList.add('active');
+            document.getElementById('reviewScreen').classList.remove('active');
+            document.getElementById('tabSystem').style.display = 'none';
 
-            // Volta a tela principal para a visualização do relatório
-            generateReport(); 
-            alert("Preparando PDF do Relatório Final via iFrame. Se o diálogo de impressão não aparecer automaticamente, verifique o iFrame oculto.");
+            window.scrollTo({top: 0, behavior: 'smooth'});
         }
+        
+        // Função downloadPDF (Dica) removida conforme solicitado.
 
         function newInterview() {
             if (confirm('Deseja iniciar uma nova entrevista? O progresso atual será perdido. Certifique-se de que salvou o PDF da entrevista anterior.')) {
@@ -1634,8 +1611,8 @@
                     <ul style="margin-left: 20px;">
                         <li><strong>(Crítico) R16:</strong> Definir e testar **urgentemente** um Plano de Disaster Recovery para sistemas críticos.</li>
                         <li><strong>(Alto) R1, R4, R15:</strong> Realizar **site survey de Wi-Fi** no Almoxarifado e Portaria para eliminar pontos cegos; auditar integração de NF-e; planejar **substituição** ou reparo de PDAs obsoletos.</li>
-                        <li><strong>(Alto) R5, R11:** Mapear processos de conferência e picking para identificar gargalos de automação e iniciar projeto de uso de coletores 100% via sistema (WMS).</li>
-                        <li>**(**Médio) R17:** Inventariar todas as planilhas "satélite" e avaliar migração imediata para sistemas oficiais (ex: Power BI, Power Apps) para **mitigar risco de perda de dados**.</li>
+                        <li><strong>(Alto) R5, R11:</strong> Mapear processos de conferência e picking para identificar gargalos de automação e iniciar projeto de uso de coletores 100% via sistema (WMS).</li>
+                        <li><strong>(Médio) R17:</strong> Inventariar todas as planilhas "satélite" e avaliar migração imediata para sistemas oficiais (ex: Power BI, Power Apps) para **mitigar risco de perda de dados**.</li>
                     </ul>
                 </div>
 
@@ -1652,7 +1629,7 @@
 
                 <div style="margin-top: 40px; padding-top: 20px; border-top: 2px solid #ddd; font-size: 12px; color: #999;">
                     <p>Relatório gerado em: ${new Date().toLocaleString('pt-BR')}</p>
-                    <p>Versão: 2.3 (iFrame Oculto para Impressão Final) | Sistema de Mapeamento Tecnológico</p>
+                    <p>Versão: 1.9 (Finalização da Impressão) | Sistema de Mapeamento Tecnológico</p>
                 </div>
             `;
             
