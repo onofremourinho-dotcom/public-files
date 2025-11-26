@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mapeamento Tecnológico - Recebimento & Expedição</title>
     <style>
+        /* [Seu CSS Original - Com correções e ajustes para impressão] */
         * {
             margin: 0;
             padding: 0;
@@ -53,14 +54,14 @@
             opacity: 0.95;
         }
         
-        /* barra de abas com rolagem no mobile */
+        /* CORREÇÃO CRÍTICA MOBILE: Habilita rolagem na barra de abas */
         .tab-system {
             display: flex;
             background: #f5f5f5;
             border-bottom: 2px solid #ddd;
-            overflow-x: auto;
-            white-space: nowrap;
-            -webkit-overflow-scrolling: touch;
+            overflow-x: auto; /* Permite rolar horizontalmente */
+            white-space: nowrap; /* Impede quebras de linha */
+            -webkit-overflow-scrolling: touch; /* Melhora a rolagem em iOS */
         }
 
         .tab-button {
@@ -360,8 +361,9 @@
             margin: 20px 0;
         }
         
+        /* NOVO ESTILO PARA O BOTÃO DE PDF DE ETAPA */
         .print-section-btn {
-            background: #5A5A5A;
+            background: #5A5A5A; /* Cor cinza mais neutra */
             color: white;
             border: none;
             padding: 8px 15px;
@@ -392,6 +394,7 @@
             transition: width 0.3s ease;
         }
         
+        /* Ajuste essencial para PDF/Impressão */
         #reviewSummaryForReport {
             max-height: none !important; 
             overflow-y: visible !important;
@@ -401,6 +404,31 @@
             margin-top: 15px;
         }
 
+        /* --- CSS DE IMPRESSÃO (Focado apenas no iFrame para o Relatório Final) --- */
+        @media print {
+            /* Esconde todo o corpo principal exceto o iFrame temporário */
+            body > *:not(#print-iframe) {
+                display: none !important;
+            }
+            
+            /* Regras para o Backup de Etapa (Mantido via injeção DOM para estabilidade) */
+            #tempPrintSection {
+                display: block !important;
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                height: auto !important;
+            }
+            #tempPrintSection * {
+                color: #000 !important;
+                background-color: transparent !important;
+                -webkit-print-color-adjust: exact; 
+                print-color-adjust: exact;
+            }
+        }
+
+        /* --- CORREÇÃO DO CSS MOBILE (TAB BAR) --- */
         @media (max-width: 768px) {
             .container { border-radius: 0; }
             .tab-system { 
@@ -416,6 +444,7 @@
             .header h1 { font-size: 24px; }
             .btn { font-size: 14px; }
             .content { padding: 20px; }
+            
             #reviewContent { 
                 max-height: 400px;
                 overflow-y: auto;
@@ -441,11 +470,11 @@
             <button class="tab-button" onclick="switchTab('etapa7')">7. Análise</button>
         </div>
         
-        <!-- ETAPA 1 -->
         <div id="etapa1" class="content active">
             <h2 style="color: var(--primary); margin-bottom: 20px;">📌 Etapa 1: Recebimento Inicial (Portaria/Desembarque)</h2>
             <button class="print-section-btn" type="button" onclick="exportSectionAsHtml('etapa1', 'Etapa 1: Recebimento Inicial')">📄 Salvar PDF desta etapa</button>
 
+            
             <div class="form-group section-interviewee">
                 <label class="form-label" style="color: #1565c0; margin-bottom: 5px;">👤 Entrevistado desta Seção:</label>
                 <input type="text" name="entrevistado_etapa1" placeholder="Nome de quem respondeu esta etapa">
@@ -558,26 +587,628 @@
             </form>
         </div>
 
-        <!-- ETAPA 2 -->
-        <!-- (todo o resto das etapas permanece exatamente igual ao que você enviou;
-             por questão de espaço não vou repetir tudo aqui, mas é só colar o restante
-             do seu HTML original a partir da <div id="etapa2"...> até antes do <script> ) -->
+        <div id="etapa2" class="content">
+            <h2 style="color: var(--primary); margin-bottom: 20px;">📌 Etapa 2: Conferência Física (Almoxarifado)</h2>
+            <button class="print-section-btn" type="button" onclick="exportSectionAsHtml('etapa2', 'Etapa 2: Conferência Física')">📄 Salvar PDF desta etapa</button>
 
-        <!-- ... cole aqui as divs etapa2, etapa3, etapa4, etapa5, etapa6, etapa7, reviewScreen e reportScreen
-             exatamente como estão no seu código que você enviou ... -->
 
+            <div class="form-group section-interviewee">
+                <label class="form-label" style="color: #1565c0; margin-bottom: 5px;">👤 Entrevistado desta Seção:</label>
+                <input type="text" name="entrevistado_etapa2" placeholder="Nome de quem respondeu esta etapa">
+            </div>
+
+            <div class="progress-bar"><div class="progress-fill" style="width: 29%;"></div></div>
+
+            <form id="form2">
+                <div class="question-card">
+                    <div class="question-id">R4</div>
+                    <div class="question-title">Qual é a qualidade da cobertura de rede Wi-Fi?</div>
+                    <div class="sub-question">Há pontos cegos ou de fraca cobertura?</div>
+                    <div class="sub-question">Frequência de desconexões durante operações?</div>
+                    <div class="sub-question">Impacto no tempo de operação quando há problema?</div>
+
+                    <div class="form-group">
+                        <label class="form-label">📝 Descreva a cobertura Wi-Fi na área</label>
+                        <textarea name="r4_descricao" placeholder="Áreas de cobertura, pontos cegos, frequência de desconexões..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">📡 Qualidade geral da Wi-Fi</label>
+                        <select name="r4_qualidade" onchange="updateRiskMatrix()">
+                            <option value="">-- Selecione --</option>
+                            <option value="1">1 - Excelente (100% cobertura)</option>
+                            <option value="2">2 - Bom (95%+ cobertura)</option>
+                            <option value="3">3 - Aceitável (80-95% cobertura)</option>
+                            <option value="4">4 - Ruim (50-80% cobertura)</option>
+                            <option value="5">5 - Crítico (menos de 50%)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">⏱️ Downtime mensal estimado (horas)</label>
+                        <input type="number" name="r4_downtime" placeholder="Ex: 10">
+                    </div>
+
+                    <div class="impacto-info">
+                        <strong>💡 Impacto esperado:</strong> Alto - paralisa operações
+                    </div>
+                </div>
+
+                <div class="question-card">
+                    <div class="question-id">R5</div>
+                    <div class="question-title">Como funciona a conferência da curva ABC?</div>
+                    <div class="sub-question">É 100% manual ou com suporte de sistema?</div>
+                    <div class="sub-question">Qual é o método? (pesagem, contagem, varredura)</div>
+                    <div class="sub-question">Tempo médio por carga? Taxa de erro?</div>
+
+                    <div class="form-group">
+                        <label class="form-label">📝 Descreva o processo de conferência ABC</label>
+                        <textarea name="r5_descricao" placeholder="Método, tempo, taxa de erro..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">⚙️ Nível de automação</label>
+                        <select name="r5_automacao" onchange="updateRiskMatrix()">
+                            <option value="">-- Selecione --</option>
+                            <option value="100">100% automatizado (sistema decide)</option>
+                            <option value="75">75% - sistema valida, operador confirma</option>
+                            <option value="50">50% - sistema gera lista, operador confere manual</option>
+                            <option value="25">25% - sistema acompanha, mas conferência é manual</option>
+                            <option value="0">0% - totalmente manual, sem sistema</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">📊 Taxa de erro/divergência</label>
+                        <input type="number" name="r5_taxa_erro" placeholder="Ex: 2%" min="0" max="100">
+                    </div>
+
+                    <div class="impacto-info">
+                        <strong>💡 Impacto esperado:</strong> Alto - impacta acuracidade de estoque
+                    </div>
+                </div>
+
+                <div class="question-card">
+                    <div class="question-id">R6</div>
+                    <div class="question-title">Como funciona o OES para caja trailer?</div>
+                    <div class="sub-question">Criação é automática ou manual?</div>
+                    <div class="sub-question">Tempo para fechar a caja?</div>
+                    <div class="sub-question">Há integração em tempo real com Check List App?</div>
+
+                    <div class="form-group">
+                        <label class="form-label">📝 Descreva o fluxo no OES</label>
+                        <textarea name="r6_descricao" placeholder="Como é criada caja, tempo de processamento, sincronização..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">🔄 Tipo de integração OES ↔ Check List</label>
+                        <select name="r6_integracao" onchange="updateRiskMatrix()">
+                            <option value="">-- Selecione --</option>
+                            <option value="real-time">Real-time - sincronização instantânea</option>
+                            <option value="batch-5">Batch - sincroniza a cada 5 min</option>
+                            <option value="batch-30">Batch - sincroniza a cada 30 min</option>
+                            <option value="batch-diario">Batch - sincroniza 1x ao dia</option>
+                            <option value="manual">Manual - requer ação de operador</option>
+                        </select>
+                    </div>
+
+                    <div class="impacto-info">
+                        <strong>💡 Impacto esperado:</strong> Médio - atraso no fechamento de movimentação
+                    </div>
+                </div>
+
+                <div class="question-card">
+                    <div class="question-id">R7</div>
+                    <div class="question-title">Como é feita a etiquetagem de materiais?</div>
+                    <div class="sub-question">Gerada automaticamente ou impressa sob demanda?</div>
+                    <div class="sub-question">Que equipamento de impressora é usado?</div>
+                    <div class="sub-question">Taxa de erro ou falta de etiqueta?</div>
+
+                    <div class="form-group">
+                        <label class="form-label">📝 Descreva o processo de etiquetagem</label>
+                        <textarea name="r7_descricao" placeholder="Processo, equipamento, taxa de erro..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">🖨️ Tipo de impressora</label>
+                        <input type="text" name="r7_impressora" placeholder="Ex: Zebra GK420, Datamax, Térmica...">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">⚙️ Nível de automação</label>
+                        <select name="r7_automacao" onchange="updateRiskMatrix()">
+                            <option value="">-- Selecione --</option>
+                            <option value="100">100% automático - imprime quando material entra</option>
+                            <option value="75">75% - operador clica para imprimir</option>
+                            <option value="50">50% - sistema gera, mas impressão manual</option>
+                            <option value="25">25% - operador cria etiqueta manualmente</option>
+                        </select>
+                    </div>
+
+                    <div class="impacto-info">
+                        <strong>💡 Impacto esperado:</strong> Médio - gera retrabalho e perda de rastreabilidade
+                    </div>
+                </div>
+
+                <div class="navigation">
+                    <button type="button" class="btn btn-secondary" onclick="switchTab('etapa1')">← Anterior</button>
+                    <button type="button" class="btn btn-primary" onclick="switchTab('etapa3')">Próxima →</button>
+                </div>
+            </form>
+        </div>
+
+        <div id="etapa3" class="content">
+            <h2 style="color: var(--primary); margin-bottom: 20px;">📌 Etapa 3: Tratamento de Divergências</h2>
+            <button class="print-section-btn" type="button" onclick="exportSectionAsHtml('etapa3', 'Etapa 3: Tratamento de Divergências')">📄 Salvar PDF desta etapa</button>
+
+
+            <div class="form-group section-interviewee">
+                <label class="form-label" style="color: #1565c0; margin-bottom: 5px;">👤 Entrevistado desta Seção:</label>
+                <input type="text" name="entrevistado_etapa3" placeholder="Nome de quem respondeu esta etapa">
+            </div>
+
+            <div class="progress-bar"><div class="progress-fill" style="width: 43%;"></div></div>
+
+            <form id="form3">
+                <div class="question-card">
+                    <div class="question-id">R8</div>
+                    <div class="question-title">Como são registradas e comunicadas divergências?</div>
+
+                    <div class="form-group">
+                        <label class="form-label">📝 Descreva o processo</label>
+                        <textarea name="r8_descricao" placeholder="Registro, comunicação, rastreamento..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">📊 Volume de divergências/mês</label>
+                        <input type="number" name="r8_volume" placeholder="Ex: 15">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">⏱️ Tempo médio de resolução (dias)</label>
+                        <input type="number" name="r8_tempo" placeholder="Ex: 3">
+                    </div>
+
+                    <div class="impacto-info">
+                        <strong>💡 Impacto esperado:</strong> Alto - impacta financeiro e fiscal
+                    </div>
+                </div>
+
+                <div class="question-card">
+                    <div class="question-id">R9</div>
+                    <div class="question-title">Como é gerenciada a carga avariada?</div>
+
+                    <div class="form-group">
+                        <label class="form-label">📝 Descreva o processo</label>
+                        <textarea name="r9_descricao" placeholder="Registro, integração com QA, tempo..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">📊 Volume de avarias/mês</label>
+                        <input type="number" name="r9_volume" placeholder="Ex: 5">
+                    </div>
+
+                    <div class="impacto-info">
+                        <strong>💡 Impacto esperado:</strong> Médio - impacta qualidade e custos
+                    </div>
+                </div>
+
+                <div class="navigation">
+                    <button type="button" class="btn btn-secondary" onclick="switchTab('etapa2')">← Anterior</button>
+                    <button type="button" class="btn btn-primary" onclick="switchTab('etapa4')">Próxima →</button>
+                </div>
+            </form>
+        </div>
+
+        <div id="etapa4" class="content">
+            <h2 style="color: var(--primary); margin-bottom: 20px;">📌 Etapa 4: Armazenagem e Expedição</h2>
+            <button class="print-section-btn" type="button" onclick="exportSectionAsHtml('etapa4', 'Etapa 4: Armazenagem e Expedição')">📄 Salvar PDF desta etapa</button>
+
+
+            <div class="form-group section-interviewee">
+                <label class="form-label" style="color: #1565c0; margin-bottom: 5px;">👤 Entrevistado desta Seção:</label>
+                <input type="text" name="entrevistado_etapa4" placeholder="Nome de quem respondeu esta etapa">
+            </div>
+
+            <div class="progress-bar"><div class="progress-fill" style="width: 57%;"></div></div>
+
+            <form id="form4">
+                <div class="question-card">
+                    <div class="question-id">R11</div>
+                    <div class="question-title">Como funciona o picking/separação?</div>
+
+                    <div class="form-group">
+                        <label class="form-label">📝 Descreva o processo</label>
+                        <textarea name="r11_descricao" placeholder="Sistema gera picking, uso de coletor, taxa de erro..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">⚙️ Nível de automação</label>
+                        <select name="r11_automacao" onchange="updateRiskMatrix()">
+                            <option value="">-- Selecione --</option>
+                            <option value="100">100% automatizado</option>
+                            <option value="75">75% - sistema define, coletor valida</option>
+                            <option value="50">50% - misto</option>
+                            <option value="25">25% - mais manual que automático</option>
+                            <option value="0">0% - totalmente manual</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">📊 Taxa de erro de picking (%)</label>
+                        <input type="number" name="r11_taxa_erro" placeholder="Ex: 1.5" min="0" max="100">
+                    </div>
+
+                    <div class="impacto-info">
+                        <strong>💡 Impacto esperado:</strong> Alto - impacta faturamento e satisfação do cliente
+                    </div>
+                </div>
+
+                <div class="question-card">
+                    <div class="question-id">R12</div>
+                    <div class="question-title">Como funciona a integração EWM?</div>
+
+                    <div class="form-group">
+                        <label class="form-label">📝 Descreva o fluxo</label>
+                        <textarea name="r12_descricao" placeholder="Integração OES-EWM, latência, sincronização..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">🔄 Tipo de integração</label>
+                        <select name="r12_integracao" onchange="updateRiskMatrix()">
+                            <option value="">-- Selecione --</option>
+                            <option value="real-time">Real-time - instantânea</option>
+                            <option value="batch-5">Batch 5 min</option>
+                            <option value="batch-30">Batch 30 min</option>
+                            <option value="batch-60">Batch 1 hora</option>
+                            <option value="manual">Manual/não integrado</option>
+                        </select>
+                    </div>
+
+                    <div class="impacto-info">
+                        <strong>💡 Impacto esperado:</strong> Alto - atraso em operações de separação
+                    </div>
+                </div>
+
+                <div class="navigation">
+                    <button type="button" class="btn btn-secondary" onclick="switchTab('etapa3')">← Anterior</button>
+                    <button type="button" class="btn btn-primary" onclick="switchTab('etapa5')">Próxima →</button>
+                </div>
+            </form>
+        </div>
+
+        <div id="etapa5" class="content">
+            <h2 style="color: var(--primary); margin-bottom: 20px;">📌 Etapa 5: Inventário e Fechamento</h2>
+            <button class="print-section-btn" type="button" onclick="exportSectionAsHtml('etapa5', 'Etapa 5: Inventário e Fechamento')">📄 Salvar PDF desta etapa</button>
+
+
+            <div class="form-group section-interviewee">
+                <label class="form-label" style="color: #1565c0; margin-bottom: 5px;">👤 Entrevistado desta Seção:</label>
+                <input type="text" name="entrevistado_etapa5" placeholder="Nome de quem respondeu esta etapa">
+            </div>
+
+            <div class="progress-bar"><div class="progress-fill" style="width: 71%;"></div></div>
+
+            <form id="form5">
+                <div class="question-card">
+                    <div class="question-id">R13</div>
+                    <div class="question-title">Como é realizado o inventário físico?</div>
+
+                    <div class="form-group">
+                        <label class="form-label">📝 Descreva o processo</label>
+                        <textarea name="r13_descricao" placeholder="Método, frequência, tempo, divergências..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">⚙️ Nível de automação (RFID, scanner, etc)</label>
+                        <select name="r13_automacao" onchange="updateRiskMatrix()">
+                            <option value="">-- Selecione --</option>
+                            <option value="100">100% automatizado (RFID contínuo)</option>
+                            <option value="75">75% - scanner, validação automática</option>
+                            <option value="50">50% - scanner manual + validação</option>
+                            <option value="25">25% - anotação + digitação posterior</option>
+                            <option value="0">0% - totalmente manual</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">⏱️ Tempo por inventário (horas)</label>
+                        <input type="number" name="r13_tempo" placeholder="Ex: 40">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">📊 Taxa de divergência (%)</label>
+                        <input type="number" name="r13_divergencia" placeholder="Ex: 1.2" min="0" max="100">
+                    </div>
+
+                    <div class="impacto-info">
+                        <strong>💡 Impacto esperado:</strong> Médio - impacta fechamento contábil
+                    </div>
+                </div>
+
+                <div class="question-card">
+                    <div class="question-id">R14</div>
+                    <div class="question-title">Como é gerado relatório de material em trânsito?</div>
+
+                    <div class="form-group">
+                        <label class="form-label">📝 Descreva o processo</label>
+                        <textarea name="r14_descricao" placeholder="Automático ou manual, frequência, erros..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">⚙️ Tipo de geração</label>
+                        <select name="r14_tipo" onchange="updateRiskMatrix()">
+                            <option value="">-- Selecione --</option>
+                            <option value="100">100% automático - sistema gera e envia</option>
+                            <option value="75">75% - sistema gera, operador envia</option>
+                            <option value="50">50% - sistema extrai, operador processa</option>
+                            <option value="25">25% - operador coleta dados e monta</option>
+                        </select>
+                    </div>
+
+                    <div class="impacto-info">
+                        <strong>💡 Impacto esperado:</strong> Alto - impacta contabilidade e fechamento mensal
+                    </div>
+                </div>
+
+                <div class="navigation">
+                    <button type="button" class="btn btn-secondary" onclick="switchTab('etapa4')">← Anterior</button>
+                    <button type="button" class="btn btn-primary" onclick="switchTab('etapa6')">Próxima →</button>
+                </div>
+            </form>
+        </div>
+
+        <div id="etapa6" class="content">
+            <h2 style="color: var(--primary); margin-bottom: 20px;">📌 Etapa 6: Infraestrutura e Suporte</h2>
+            <button class="print-section-btn" type="button" onclick="exportSectionAsHtml('etapa6', 'Etapa 6: Infraestrutura e Suporte')">📄 Salvar PDF desta etapa</button>
+
+
+            <div class="form-group section-interviewee">
+                <label class="form-label" style="color: #1565c0; margin-bottom: 5px;">👤 Entrevistado desta Seção:</label>
+                <input type="text" name="entrevistado_etapa6" placeholder="Nome de quem respondeu esta etapa">
+            </div>
+
+            <div class="progress-bar"><div class="progress-fill" style="width: 86%;"></div></div>
+
+            <form id="form6">
+                <div class="question-card">
+                    <div class="question-id">R15</div>
+                    <div class="question-title">Qual é o estado dos coletores/PDA?</div>
+
+                    <div class="form-group">
+                        <label class="form-label">📝 Descreva o estado dos equipamentos</label>
+                        <textarea name="r15_descricao" placeholder="Marca/modelo, idade, taxa de falha..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">🖥️ Marca e modelo dos coletores</label>
+                        <input type="text" name="r15_modelo" placeholder="Ex: Zebra MC33, Datalogic, Symbol...">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">📊 Taxa de falha/manutenção mensal (%)</label>
+                        <input type="number" name="r15_taxa_falha" placeholder="Ex: 5" min="0" max="100">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">⚠️ Criticidade do estado dos equipamentos</label>
+                        <select name="r15_criticidade" onchange="updateRiskMatrix()">
+                            <option value="">-- Selecione --</option>
+                            <option value="1">1 - Ótimo - equipamentos novos e funcionando</option>
+                            <option value="2">2 - Bom - alguns equipamentos antigos mas funcionando</option>
+                            <option value="3">3 - Médio - falhas ocasionais</option>
+                            <option value="4">4 - Ruim - frequentes manutenções</option>
+                            <option value="5">5 - Crítico - não funciona ou sem equipamento</option>
+                        </select>
+                    </div>
+
+                    <div class="impacto-info">
+                        <strong>💡 Impacto esperado:</strong> Alto - paralisa operações se todos falharem
+                    </div>
+                </div>
+
+                <div class="question-card">
+                    <div class="question-id">R16</div>
+                    <div class="question-title">Qual é a confiabilidade da infraestrutura de rede?</div>
+
+                    <div class="form-group">
+                        <label class="form-label">📝 Descreva a infraestrutura</label>
+                        <textarea name="r16_descricao" placeholder="SLA, redundância, tempo de resolução, plano DR..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">📊 SLA de disponibilidade (%)</label>
+                        <input type="number" name="r16_sla" placeholder="Ex: 99.5" min="0" max="100">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">⚙️ Há redundância/failover?</label>
+                        <select name="r16_redundancia">
+                            <option value="">-- Selecione --</option>
+                            <option value="sim">Sim - há backup automático</option>
+                            <option value="parcial">Parcial - redundância em alguns pontos</option>
+                            <option value="nao">Não - sem redundância</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">⏱️ MTTR (tempo médio de resolução, minutos)</label>
+                        <input type="number" name="r16_mttr" placeholder="Ex: 30">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">🔄 Plano de Disaster Recovery?</label>
+                        <select name="r16_dr" onchange="updateRiskMatrix()">
+                            <option value="">-- Selecione --</option>
+                            <option value="testado">Sim - testado regularmente</option>
+                            <option value="existe">Sim - existe mas não testado</option>
+                            <option value="incompleto">Incompleto - existe para alguns sistemas</option>
+                            <option value="nao">Não - sem plano</option>
+                        </select>
+                    </div>
+
+                    <div class="impacto-info">
+                        <strong>💡 Impacto esperado:</strong> Crítico - paralisa toda operação
+                    </div>
+                </div>
+
+                <div class="question-card">
+                    <div class="question-id">R17</div>
+                    <div class="question-title">Existem sistemas satélites não oficiais?</div>
+
+                    <div class="form-group">
+                        <label class="form-label">📝 Liste planilhas ou apps paralelos em uso</label>
+                        <textarea name="r17_descricao" placeholder="Planilhas Excel, apps informais, motivos..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">📊 Quantidade de planilhas em uso</label>
+                        <input type="number" name="r17_quantidade" placeholder="Ex: 5">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">⚠️ Risco de perda de dados</label>
+                        <select name="r17_risco" onchange="updateRiskMatrix()">
+                            <option value="">-- Selecione --</option>
+                            <option value="1">1 - Baixo - backup existe</option>
+                            <option value="2">2 - Médio - backup ocasional</option>
+                            <option value="3">3 - Alto - sem backup consistente</option>
+                            <option value="4">4 - Crítico - sem backup nenhum</option>
+                        </select>
+                    </div>
+
+                    <div class="impacto-info">
+                        <strong>💡 Impacto esperado:</strong> Médio - falta de rastreabilidade e risco de dados
+                    </div>
+                </div>
+
+                <div class="navigation">
+                    <button type="button" class="btn btn-secondary" onclick="switchTab('etapa5')">← Anterior</button>
+                    <button type="button" class="btn btn-primary" onclick="switchTab('etapa7')">Próxima →</button>
+                </div>
+            </form>
+        </div>
+
+        <div id="etapa7" class="content">
+            <h2 style="color: var(--primary); margin-bottom: 20px;">📌 Etapa 7: Análise e Relatórios</h2>
+            <button class="print-section-btn" type="button" onclick="exportSectionAsHtml('etapa7', 'Etapa 7: Análise e Relatórios')">📄 Salvar PDF desta etapa</button>
+
+            
+            <div class="form-group section-interviewee">
+                <label class="form-label" style="color: #1565c0; margin-bottom: 5px;">👤 Entrevistado desta Seção:</label>
+                <input type="text" name="entrevistado_etapa7" placeholder="Nome de quem respondeu esta etapa">
+            </div>
+
+            <div class="progress-bar"><div class="progress-fill" style="width: 100%;"></div></div>
+
+            <form id="form7">
+                <div class="question-card">
+                    <div class="question-id">R18</div>
+                    <div class="question-title">Quais relatórios/dashboards estão em uso?</div>
+
+                    <div class="form-group">
+                        <label class="form-label">📝 Liste os relatórios existentes</label>
+                        <textarea name="r18_descricao" placeholder="Relatórios, dashboards, frequência de atualização, KPIs..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">🔄 Frequência de atualização dos dados</label>
+                        <select name="r18_frequencia" onchange="updateRiskMatrix()">
+                            <option value="">-- Selecione --</option>
+                            <option value="real-time">Real-time - sempre atualizado</option>
+                            <option value="10min">10 minutos</option>
+                            <option value="1hora">1 hora</option>
+                            <option value="1dia">1 dia</option>
+                            <option value="manual">Manual - gerado sob demanda</option>
+                        </select>
+                    </div>
+
+                    <div class="impacto-info">
+                        <strong>💡 Impacto esperado:</strong> Médio - visibilidade gerencial
+                    </div>
+                </div>
+
+                <div class="question-card">
+                    <div class="question-id">R19</div>
+                    <div class="question-title">Há visibilidade em tempo real de problemas?</div>
+
+                    <div class="form-group">
+                        <label class="form-label">📝 Descreva o monitoramento atual</label>
+                        <textarea name="r19_descricao" placeholder="Alertas, visibilidade, integração entre sistemas..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">⚠️ Sistema emite alertas automáticos?</label>
+                        <select name="r19_alertas" onchange="updateRiskMatrix()">
+                            <option value="">-- Selecione --</option>
+                            <option value="sim">Sim - alertas automáticos em tempo real</option>
+                            <option value="parcial">Parcial - alguns alertas apenas</option>
+                            <option value="nao">Não - sem alertas automáticos</option>
+                        </select>
+                    </div>
+
+                    <div class="impacto-info">
+                        <strong>💡 Impacto esperado:</strong> Médio - reatividade a problemas
+                    </div>
+                </div>
+
+                <div class="question-card" style="background: #f9f9f9;">
+                    <h3 style="color: var(--primary); margin-bottom: 15px;">📋 Fechamento</h3>
+                    
+                    <div class="form-group">
+                        <label class="form-label">📅 Data de Preenchimento (Geral)</label>
+                        <input type="date" name="data_entrevista" id="dataEntrevista" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">📝 Observações Finais (Geral)</label>
+                        <textarea name="observacoes_finais" placeholder="Qualquer comentário, prioridades, sugestões..."></textarea>
+                    </div>
+                </div>
+
+                <div class="navigation">
+                    <button type="button" class="btn btn-secondary" onclick="switchTab('etapa6')">← Anterior</button>
+                    <button type="button" class="btn btn-success" onclick="reviewAnswers()">✓ Revisar e Confirmar</button>
+                </div>
+            </form>
+        </div>
+
+        <div id="reviewScreen" class="review-screen">
+            <h2 style="color: var(--primary); margin-bottom: 20px;">🔍 Revisão das Respostas</h2>
+
+            <div class="review-summary" id="reviewContent">
+                </div>
+
+            <div class="navigation">
+                <button type="button" class="btn btn-secondary" onclick="backToForm()">← Corrigir Dados</button>
+                <button type="button" class="btn btn-success" onclick="generateReport()">✓ Gerar Relatório Final</button>
+            </div>
+        </div>
+
+        <div id="reportScreen" class="report-screen">
+            <div id="reportContent">
+                </div>
+
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #ddd;">
+                <button class="print-btn" onclick="generateAndPrintFinalReport()">🖨️ Gerar PDF / Imprimir (FINAL)</button>
+                <button class="btn btn-secondary" style="margin-left: 10px;" onclick="newInterview()">🔄 Nova Entrevista (Limpar Dados)</button>
+            </div>
+        </div>
     </div>
 
     <script>
         const STORAGE_KEY = 'currentSurveyData'; 
         let formData = {}; 
 
+        // --- INICIALIZAÇÃO ---
         document.addEventListener('DOMContentLoaded', () => {
              loadDataFromLocalStorage(); 
              attachAutoSave(); 
              updateRiskMatrix(); 
         });
         
+        // --- FUNÇÕES DE SALVAMENTO ---
+
         function saveDataToLocalStorage() {
             let currentData = {};
             document.querySelectorAll('form, .content').forEach(container => {
@@ -594,8 +1225,7 @@
         function loadDataFromLocalStorage() {
             const savedData = localStorage.getItem(STORAGE_KEY);
             if (!savedData) {
-                const dt = document.getElementById('dataEntrevista');
-                if (dt) dt.valueAsDate = new Date(); 
+                document.getElementById('dataEntrevista').valueAsDate = new Date(); 
                 return;
             }
             
@@ -615,6 +1245,9 @@
                 element.addEventListener('change', saveDataToLocalStorage);
             });
         }
+
+
+        // --- NAVEGAÇÃO E REVISÃO ---
 
         function switchTab(tabId) {
             saveDataToLocalStorage(); 
@@ -664,10 +1297,7 @@
                     const questionTitle = questionCard.querySelector('.question-title');
                     const questionId = questionCard.querySelector('.question-id');
                     const prefix = questionId ? questionId.innerText + ': ' : '';
-                    const fg = field.closest('.form-group');
-                    const fieldLabelText = fg && fg.querySelector('.form-label')
-                        ? fg.querySelector('.form-label').innerText.replace(/📝|📊|📡|⚙️|🖨️|🖥️|🔄|⚠️|⏱️/g, '').trim()
-                        : '';
+                    const fieldLabelText = field.closest('.form-group').querySelector('.form-label') ? field.closest('.form-group').querySelector('.form-label').innerText.replace(/📝|📊|📡|⚙️|🖨️|🖥️|🔄|⚠️|⏱️/g, '').trim() : '';
 
                     if (questionTitle) {
                         label = prefix + questionTitle.innerText + (fieldLabelText && !questionTitle.innerText.includes(fieldLabelText) ? ' (' + fieldLabelText + ')' : '');
@@ -701,6 +1331,7 @@
             formData = JSON.parse(savedData);
             
             let reviewHTML = '';
+            
             const allFields = document.querySelectorAll('input, textarea, select');
             
             allFields.forEach(field => {
@@ -733,8 +1364,8 @@
             document.getElementById('tabSystem').style.display = 'flex';
             switchTab('etapa7');
         }
-
-        /* SALVAR PDF POR ETAPA – exportSectionAsHtml permanece igual ao seu */
+        
+        // --- MÉTODO CORRIGIDO: Salva por Etapa (Injeta e Imprime) ---
 
         function exportSectionAsHtml(sectionId, sectionTitle) {
             saveDataToLocalStorage(); 
@@ -775,16 +1406,17 @@
                 return;
             }
 
+            // 2. Cria o conteúdo temporário para impressão
             const printContent = document.createElement('div');
             printContent.id = 'tempPrintSection';
             printContent.innerHTML = `
-                <div style="padding: 20px; max-width: 800px; margin: 0 auto;">
-                    <div style="background: #1e3c72; color: white; padding: 20px; border-radius: 6px 6px 0 0; margin-bottom: 20px; text-align: center;">
+                <div class="backup-section-content" style="padding: 20px; max-width: 800px; margin: 0 auto;">
+                    <div class="backup-header" style="background: #1e3c72; color: white; padding: 20px; border-radius: 6px 6px 0 0; margin-bottom: 20px; text-align: center;">
                         <h1 style="font-size: 24px; margin: 0;">Backup - Mapeamento Tecnológico</h1>
                         <p>${escapeHtml(sectionTitle)}</p>
                     </div>
                     
-                    <div style="background: #fff3cd; padding: 10px; border-radius: 4px; border-left: 4px solid #ff9800; margin-bottom: 20px; font-weight: bold; color: #333; font-size: 14px;">
+                    <div class="interviewee-info" style="background: #fff3cd; padding: 10px; border-radius: 4px; border-left: 4px solid #ff9800; margin-bottom: 20px; font-weight: bold; color: #333; font-size: 14px;">
                         Entrevistado: ${escapeHtml(interviewedName)} | Data do Backup: ${new Date().toLocaleDateString('pt-BR')}
                     </div>
                     
@@ -796,6 +1428,7 @@
                 </div>
             `;
             
+            // 3. Temporariamente oculta o conteúdo principal e insere o conteúdo de impressão
             const containerEl = document.querySelector('.container');
             const originalContainerDisplay = containerEl.style.display;
             const originalBodyBackground = document.body.style.background;
@@ -804,9 +1437,11 @@
             document.body.style.background = 'white'; 
             document.body.appendChild(printContent);
             
+            // 4. Aciona a impressão (com atraso para estabilidade em mobile)
             setTimeout(() => {
                 window.print();
                 
+                // 5. Restaura a visualização da tela
                 setTimeout(() => {
                     document.body.removeChild(printContent);
                     containerEl.style.display = originalContainerDisplay;
@@ -819,138 +1454,84 @@
             alert(`Preparando PDF da ${sectionTitle}. Aguarde o diálogo de impressão aparecer e selecione "Salvar como PDF".`);
         }
 
-        /* ✅ NOVA FUNÇÃO: GERA E IMPRIME O PDF FINAL SEM FICAR EM BRANCO */
 
+        // --- FUNÇÃO CRÍTICA FINAL: GERA E IMPRIME O RELATÓRIO FINAL EM NOVA JANELA (Versão 2.2 Revertida para Nova Aba) ---
+        
         function generateAndPrintFinalReport() {
-            saveDataToLocalStorage();
+            // 1. Gera o HTML do relatório final usando a função existente
+            const criticidades = calculateCriticalities();
+            const reportHTML = buildReport(criticidades);
 
-            const reportContainer = document.getElementById('reportContent');
-            if (!reportContainer || !reportContainer.innerHTML.trim()) {
-                alert('Primeiro clique em "Gerar Relatório Final" antes de gerar o PDF.');
-                return;
-            }
+            // 2. Coleta o estilo CSS de TODA a página (a parte mais crucial)
+            let styleContent = '';
+            document.querySelectorAll('style').forEach(style => {
+                styleContent += style.innerHTML;
+            });
 
-            const reportHTML = reportContainer.innerHTML;
-
-            const css = `
-                body {
-                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                    background: #ffffff;
-                    padding: 20px;
-                    max-width: 1000px;
-                    margin: 0 auto;
-                }
-                .report-title {
-                    font-size: 28px;
-                    font-weight: bold;
-                    color: #1e3c72;
-                    margin-bottom: 20px;
-                    border-bottom: 3px solid #4CAF50;
-                    padding-bottom: 15px;
-                }
-                .report-section {
-                    margin-bottom: 32px;
-                }
-                .report-section-title {
-                    font-size: 20px;
-                    font-weight: 600;
-                    color: #2a5298;
-                    margin-bottom: 12px;
-                    border-left: 4px solid #4CAF50;
-                    padding-left: 12px;
-                }
-                .review-summary {
-                    background: #f0f7ff;
-                    padding: 16px;
-                    border-radius: 8px;
-                }
-                .review-item {
-                    margin-bottom: 10px;
-                    padding: 10px;
-                    background: #ffffff;
-                    border-left: 4px solid #1e3c72;
-                    border-radius: 4px;
-                }
-                .review-item-title {
-                    font-weight: 600;
-                    color: #1e3c72;
-                    margin-bottom: 4px;
-                }
-                .review-item-value {
-                    font-size: 13px;
-                    color: #444;
-                    white-space: pre-wrap;
-                }
-                .risk-matrix {
-                    width: 100%;
-                    border-collapse: collapse;
-                    font-size: 12px;
-                    margin-top: 10px;
-                }
-                .risk-matrix th, .risk-matrix td {
-                    border: 1px solid #ddd;
-                    padding: 6px 8px;
-                    text-align: center;
-                }
-                .risk-matrix th {
-                    background: #1e3c72;
-                    color: #fff;
-                }
-                .gap-criticality {
-                    display: inline-block;
-                    padding: 3px 8px;
-                    border-radius: 3px;
-                    font-weight: bold;
-                    font-size: 11px;
-                    color: #fff;
-                }
-                .criticality-alto { background: #f44336; }
-                .criticality-medio { background: #ff9800; }
-                .criticality-baixo { background: #4CAF50; }
-                @page { margin: 15mm; }
-            `;
-
-            const printWindow = window.open('', '_blank', 'width=900,height=900');
-            if (!printWindow) {
-                alert('O navegador bloqueou o pop-up. Libere pop-ups para este site e tente novamente.');
-                return;
-            }
-
-            printWindow.document.open();
-            printWindow.document.write(`
+            // 3. Cria o HTML completo para a nova janela
+            const finalReportHtml = `
                 <!DOCTYPE html>
                 <html lang="pt-BR">
                 <head>
                     <meta charset="UTF-8">
                     <title>Relatório Final - Mapeamento Tecnológico</title>
-                    <style>${css}</style>
+                    <style>${styleContent}</style>
+                    <style>
+                        /* Força a nova janela a mostrar APENAS o relatório e o container com o mínimo de estilo */
+                        body { 
+                            padding: 20px !important; 
+                            background: white !important; 
+                        }
+                        .container {
+                            max-width: 1000px !important; 
+                            margin: 0 auto !important; 
+                            box-shadow: none !important;
+                            border-radius: 0 !important;
+                            overflow: visible !important;
+                        }
+                        /* Esconde botões na impressão da nova janela */
+                        .print-btn, .btn-secondary, .tab-system, .header, .navigation { display: none !important; } 
+                        .report-screen { display: block !important; padding: 0 !important; }
+                        
+                        /* Garante que o CSS de cores para impressão (para o modo pop-up) funcione */
+                        @media print {
+                            body * { visibility: visible !important; display: block !important; }
+                        }
+                    </style>
                 </head>
                 <body>
-                    ${reportHTML}
+                    <div class="container">
+                        <div class="report-screen active" style="padding: 0;">
+                            <div id="reportContent">
+                                ${reportHTML}
+                            </div>
+                        </div>
+                    </div>
+                    <script>
+                        // Aciona a impressão com atraso para estabilidade
+                        setTimeout(() => {
+                            window.print();
+                            // Tenta fechar a janela automaticamente (pode ser bloqueado)
+                            setTimeout(() => { window.close(); }, 1000);
+                        }, 500); // Atraso de 500ms
+                    </script>
                 </body>
                 </html>
-            `);
+            `;
+
+            // 4. Abre a nova janela/aba e insere o HTML
+            const printWindow = window.open("", "RelatorioFinal");
+            if (!printWindow) {
+                alert("O navegador bloqueou a abertura da janela. Por favor, desative o bloqueador de pop-ups (ou verifique o canto da tela) e tente novamente.");
+                return;
+            }
+            
+            printWindow.document.write(finalReportHtml);
             printWindow.document.close();
+            printWindow.focus();
 
-            printWindow.onload = function () {
-                printWindow.focus();
-                printWindow.print();
-                setTimeout(() => {
-                    printWindow.close();
-                }, 500);
-            };
-        }
-
-        function generateReport() {
-            const criticidades = calculateCriticalities();
-            const reportHTML = buildReport(criticidades);
-
-            document.getElementById('reportContent').innerHTML = reportHTML;
-            document.getElementById('reportScreen').classList.add('active');
-            document.getElementById('reviewScreen').classList.remove('active');
-            document.getElementById('tabSystem').style.display = 'none';
-
-            window.scrollTo({top: 0, behavior: 'smooth'});
+            // Volta a tela principal para a visualização do relatório
+            generateReport(); 
         }
 
         function newInterview() {
@@ -959,6 +1540,8 @@
                 location.reload();
             }
         }
+
+        // --- LÓGICA DO RELATÓRIO (CRITICIDADES) ---
 
         function calculateCriticalities() {
             saveDataToLocalStorage(); 
@@ -1042,10 +1625,10 @@
                 <div class="report-section">
                     <div class="report-section-title">🔧 Recomendações Imediatas (Baseado nos Gaps)</div>
                     <ul style="margin-left: 20px;">
-                        <li><strong>(Crítico) R16:</strong> Definir e testar urgentemente um Plano de Disaster Recovery para sistemas críticos.</li>
-                        <li><strong>(Alto) R1, R4, R15:</strong> Realizar site survey de Wi-Fi no Almoxarifado e Portaria; auditar integração de NF-e; planejar substituição ou reparo de PDAs obsoletos.</li>
-                        <li><strong>(Alto) R5, R11:</strong> Mapear processos de conferência e picking para identificar gargalos de automação e evoluir para uso intensivo de WMS/coletor.</li>
-                        <li><strong>(Médio) R17:</strong> Inventariar todas as planilhas "satélite" e avaliar migração imediata para sistemas oficiais (ex.: Power BI, Power Apps).</li>
+                        <li><strong>(Crítico) R16:</strong> Definir e testar **urgentemente** um Plano de Disaster Recovery para sistemas críticos.</li>
+                        <li><strong>(Alto) R1, R4, R15:</strong> Realizar **site survey de Wi-Fi** no Almoxarifado e Portaria para eliminar pontos cegos; auditar integração de NF-e; planejar **substituição** ou reparo de PDAs obsoletos.</li>
+                        <li><strong>(Alto) R5, R11:** Mapear processos de conferência e picking para identificar gargalos de automação e iniciar projeto de uso de coletores 100% via sistema (WMS).</li>
+                        <li>**(**Médio) R17:** Inventariar todas as planilhas "satélite" e avaliar migração imediata para sistemas oficiais (ex: Power BI, Power Apps) para **mitigar risco de perda de dados**.</li>
                     </ul>
                 </div>
 
@@ -1056,7 +1639,8 @@
                         <strong>Observações Finais:</strong> ${escapeHtml(formData.observacoes_finais || 'N/A')}
                     </div>
                     
-                    <div id="reviewSummaryForReport" class="review-summary"></div>
+                    <div id="reviewSummaryForReport" class="review-summary">
+                        </div>
                 </div>
 
                 <div style="margin-top: 40px; padding-top: 20px; border-top: 2px solid #ddd; font-size: 12px; color: #999;">
@@ -1073,8 +1657,7 @@
                     const itemsToRemove = reportReviewEl.querySelectorAll('.review-item-title');
                     itemsToRemove.forEach(item => {
                         if (item.innerText.includes('Data de Preenchimento') || item.innerText.includes('Observações Finais')) {
-                            const card = item.closest('.review-item');
-                            if (card) card.style.display = 'none';
+                            item.closest('.review-item').style.display = 'none';
                         }
                     });
                 }
@@ -1102,4 +1685,5 @@
 
     </script>
 </body>
+
 </html>
