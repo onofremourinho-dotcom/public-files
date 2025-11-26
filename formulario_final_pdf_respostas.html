@@ -1491,7 +1491,7 @@
         
         function generateAndPrintFinalReport() {
             // 1. Garante que o Report Content esteja na tela e com os dados corretos
-            // O isSilent=true garante que não vamos travar a tela com a transição duplicada
+            // Passamos isSilent=true para que generateReport não tente fazer a transição de tela duplicada
             generateReport(true); 
 
             // 2. Oculta o elemento de impressão de seção para que o CSS de impressão final funcione
@@ -1503,7 +1503,6 @@
                 
                 // 4. Restaura a visualização da tela
                 setTimeout(() => {
-                    // Mantemos a tela de relatório ativa para o usuário.
                     document.getElementById('reportScreen').classList.add('active'); 
                 }, 500);
                 
@@ -1513,20 +1512,31 @@
         }
 
 
-        // CORREÇÃO APLICADA AQUI: Simplifica a lógica e garante que o review seja atualizado antes
+        // CORREÇÃO: Garante que a transição de tela e o preenchimento do reviewSummaryForReport ocorram na ordem correta.
         function generateReport(isSilent = false) {
-            // 1. Garante que o conteúdo de revisão esteja pronto. (silent=true para não tentar mostrar a tela de revisão, que já está visível ou deve ser ignorada)
+            // 1. Garante que o conteúdo de revisão esteja pronto.
             reviewAnswers(true); 
 
             // 2. Calcula criticidades e monta o HTML do relatório.
             const criticidades = calculateCriticalities();
-            const reportHTML = buildReport(criticidades);
+            const reportHTML = buildReport(criticidades); // buildReport agora APENAS RETORNA o HTML
 
             // 3. Insere o HTML e faz a transição de tela.
             document.getElementById('reportContent').innerHTML = reportHTML;
             document.getElementById('reportScreen').classList.add('active');
             document.getElementById('reviewScreen').classList.remove('active');
             document.getElementById('tabSystem').style.display = 'none';
+
+            // 4. PASSO CRÍTICO (CORREÇÃO): O elemento #reviewSummaryForReport AGORA EXISTE e pode ser populado.
+            const reviewContentHTML = document.getElementById('reviewContent').innerHTML;
+            const targetElement = document.getElementById('reviewSummaryForReport');
+            
+            if (targetElement) {
+                targetElement.innerHTML = reviewContentHTML;
+            } else {
+                 // Deve ser silencioso, pois o erro indica que a estrutura HTML do buildReport não está correta
+                 // console.error("Erro: Elemento #reviewSummaryForReport não encontrado após a injeção do HTML."); 
+            }
 
             if (!isSilent) {
                 window.scrollTo({top: 0, behavior: 'smooth'});
@@ -1588,6 +1598,7 @@
             return critValue;
         }
 
+        // CORREÇÃO: Remove o código de manipulação do DOM. Agora, APENAS RETORNA o HTML.
         function buildReport(criticidades) {
             const data = getFieldDisplayValue('data_entrevista', document.getElementsByName('data_entrevista')[0]) || 'N/A';
 
@@ -1673,12 +1684,9 @@
 
                 <div style="margin-top: 40px; padding-top: 20px; border-top: 2px solid #ddd; font-size: 12px; color: #999; text-align: center;">
                     <p>Relatório gerado em: ${new Date().toLocaleString('pt-BR')}</p>
-                    <p>Versão: 3.2 (Correção Final de Fluxo) | Sistema de Mapeamento Tecnológico</p>
+                    <p>Versão: 3.3 (Correção Final de TypeError) | Sistema de Mapeamento Tecnológico</p>
                 </div>
             `;
-            
-            // Corrige o resumo de revisão antes de retornar
-            document.getElementById('reviewSummaryForReport').innerHTML = document.getElementById('reviewContent').innerHTML;
             
             return html;
         }
