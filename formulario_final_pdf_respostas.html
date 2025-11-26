@@ -404,67 +404,26 @@
             margin-top: 15px;
         }
 
-        /* --- CORREÇÃO FINAL CRÍTICA DO CSS DE IMPRESSÃO (@media print) --- */
+        /* --- CSS DE IMPRESSÃO (Mantemos apenas para a impressão de etapas) --- */
         @media print {
-            /* 1. Esconde TUDO no BODY */
-            body * {
-                visibility: hidden !important;
+            /* Regras para o Backup de Etapa (#tempPrintSection) */
+            body > *:not(#tempPrintSection) {
                 display: none !important;
             }
-
-            /* 2. Força a visibilidade SOMENTE do #reportScreen e seu conteúdo */
-            .report-screen, 
-            .report-screen * {
-                visibility: visible !important;
+            #tempPrintSection {
                 display: block !important;
-            }
-
-            /* 3. Posiciona o report-screen para ocupar a área de impressão */
-            .report-screen {
                 position: absolute !important;
                 left: 0 !important;
                 top: 0 !important;
-                padding: 0 !important;
                 width: 100% !important;
                 height: auto !important;
-                box-shadow: none !important;
             }
-            
-            /* Regras de backup por etapa (ainda necessárias para o outro botão) */
-            #tempPrintSection,
+            /* Garante que o texto apareça */
             #tempPrintSection * {
-                visibility: visible !important;
-                display: block !important;
-            }
-            #tempPrintSection {
-                position: absolute !important;
-                left: 0 !important;
-                top: 0 !important;
-                width: 100% !important;
-            }
-
-            /* 4. Garante que o fundo da impressão seja branco */
-            body, .container {
-                background: white !important;
-            }
-            
-            /* Garante que o texto seja preto e os fundos das caixas sejam claros para visualização */
-            * {
                 color: #000 !important;
                 background-color: transparent !important;
-                -webkit-print-color-adjust: exact; /* Tenta preservar cores dos backgrounds */
-                print-color-adjust: exact;
-            }
-
-            /* Força os elementos de cabeçalho e caixas de resumo a terem um fundo claro */
-            .header, .backup-header, .review-item, .impacto-info, .section-interviewee, .question-card {
-                background-color: #f0f0f0 !important; 
                 -webkit-print-color-adjust: exact; 
                 print-color-adjust: exact;
-            }
-            
-            .report-title, .report-section-title {
-                color: var(--primary) !important;
             }
         }
 
@@ -472,14 +431,13 @@
         @media (max-width: 768px) {
             .container { border-radius: 0; }
             .tab-system { 
-                /* Permite rolagem horizontal */
                 overflow-x: auto;
                 white-space: nowrap;
                 -webkit-overflow-scrolling: touch;
             }
             .tab-button { 
-                flex-shrink: 0; /* Impede que os botões encolham */
-                min-width: 120px; /* Garante tamanho suficiente para rolagem */
+                flex-shrink: 0; 
+                min-width: 120px; 
                 font-size: 12px;
             }
             .header h1 { font-size: 24px; }
@@ -1231,7 +1189,7 @@
                 </div>
 
             <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #ddd;">
-                <button class="print-btn" onclick="triggerPrint()">🖨️ Gerar PDF / Imprimir (FINAL)</button>
+                <button class="print-btn" onclick="generateAndPrintFinalReport()">🖨️ Gerar PDF / Imprimir (FINAL)</button>
                 <button class="btn btn-secondary" style="margin-left: 10px;" onclick="newInterview()">🔄 Nova Entrevista (Limpar Dados)</button>
             </div>
         </div>
@@ -1496,36 +1454,73 @@
         }
 
 
-        // --- FUNÇÕES DE RELATÓRIO FINAL ---
+        // --- FUNÇÃO CRÍTICA FINAL: GERA E IMPRIME O RELATÓRIO FINAL EM NOVA JANELA ---
         
-        /**
-         * Aciona a impressão do relatório final com um pequeno atraso (300ms).
-         * Este atraso é crucial para a estabilidade em navegadores móveis.
-         */
-        function triggerPrint() {
-            // 1. Garante que o Relatório Final está visível/ativo
-            document.getElementById('reportScreen').classList.add('active');
-            document.getElementById('tabSystem').style.display = 'none';
-            document.getElementById('reviewScreen').classList.remove('active');
+        function generateAndPrintFinalReport() {
+            // 1. Gera o HTML do relatório final usando a função existente
+            const criticidades = calculateCriticalities();
+            const reportHTML = buildReport(criticidades);
+
+            // 2. Coleta o estilo de impressão necessário (para replicar o look)
+            const style = document.querySelector('style').innerHTML;
+
+            // 3. Cria o HTML completo para a nova janela
+            const finalReportHtml = `
+                <!DOCTYPE html>
+                <html lang="pt-BR">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Relatório Final - Mapeamento Tecnológico</title>
+                    <style>${style}</style>
+                    <style>
+                        /* Força o novo corpo a ter um layout limpo */
+                        body { 
+                            padding: 20px !important;
+                            background: white !important;
+                            max-width: 1000px !important;
+                            margin: 0 auto !important;
+                            box-shadow: none !important;
+                        }
+                        /* Oculta apenas os botões de navegação e controles no PDF final */
+                        .print-btn, .btn-secondary, .tab-system, .header { display: none !important; } 
+                        /* Garante que o conteúdo do relatório seja exibido */
+                        .report-screen { display: block !important; padding: 0 !important; }
+                    </style>
+                </head>
+                <body>
+                    <div class="report-screen active" style="padding: 0;">
+                        <div id="reportContent">
+                            ${reportHTML}
+                        </div>
+                    </div>
+                    <script>
+                        // Aciona a impressão com atraso para estabilidade
+                        setTimeout(() => {
+                            window.print();
+                            // Tenta fechar a janela automaticamente (pode ser bloqueado)
+                            setTimeout(() => { window.close(); }, 500);
+                        }, 300);
+                    </script>
+                </body>
+                </html>
+            `;
+
+            // 4. Abre a nova janela/aba e insere o HTML
+            const printWindow = window.open("", "RelatorioFinal", "height=800,width=800,scrollbars=yes");
+            if (!printWindow) {
+                alert("O navegador bloqueou a abertura da janela. Por favor, desative o bloqueador de pop-ups e tente novamente.");
+                return;
+            }
             
-            // 2. Oculta os botões de navegação da tela de relatório (para PDF limpo)
-            const navButtons = document.querySelector('#reportScreen > div:last-child');
-            const originalNavDisplay = navButtons ? navButtons.style.display : 'flex';
-            if (navButtons) navButtons.style.display = 'none';
-            
-            // 3. Dispara a impressão com atraso para estabilizar em mobile
-            setTimeout(() => {
-                window.print();
-                
-                // 4. Restaura o estado da tela após a impressão
-                setTimeout(() => {
-                    if (navButtons) navButtons.style.display = originalNavDisplay; 
-                }, 100);
-            }, 300); 
+            printWindow.document.write(finalReportHtml);
+            printWindow.document.close();
+            printWindow.focus();
         }
 
+        // A função triggerPrint() original foi substituída pela generateAndPrintFinalReport()
 
         function generateReport() {
+            // Este botão não deve mais imprimir, apenas preparar a tela de relatório na tela principal
             const criticidades = calculateCriticalities();
             const reportHTML = buildReport(criticidades);
 
@@ -1648,7 +1643,7 @@
 
                 <div style="margin-top: 40px; padding-top: 20px; border-top: 2px solid #ddd; font-size: 12px; color: #999;">
                     <p>Relatório gerado em: ${new Date().toLocaleString('pt-BR')}</p>
-                    <p>Versão: 2.1 (Ajuste Final de CSS de Impressão) | Sistema de Mapeamento Tecnológico</p>
+                    <p>Versão: 2.2 (Isolamento Total do PDF Final) | Sistema de Mapeamento Tecnológico</p>
                 </div>
             `;
             
